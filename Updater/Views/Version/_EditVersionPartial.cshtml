@@ -1,0 +1,79 @@
+﻿@model Updater.Models.VersionViewModel
+
+<div class="modal-dialog" role="document" id="dialogo">
+    <form asp-controller="Version" asp-action="EditVersion" enctype="multipart/form-data"
+          data-ajax="true" data-ajax-method="POST" data-ajax-confirm="Deseja Continuar?" data-ajax-complete="completed">
+        @Html.AntiForgeryToken();
+
+        <style>
+            .modal-content,
+            .modal-dialog {
+                height: calc(90vh - 100px);
+                max-width: calc(99vw - 100px);
+            }
+
+            .modal-header {
+                display: initial;
+            }
+        </style>
+        <div class="modal-content text-center">
+            <hr />
+            <div class="modal-header">
+                @if (Model.Id != Guid.Empty)
+                {
+                    <h3 id="myModalLabel">Editando Pacote</h3>
+                }
+                else
+                {
+                    <h3 id="myModalLabel">Criando Pacote</h3>
+                }
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <label>@ViewData["error"]?.ToString() </label>
+                    <div class="col-md-6">
+                        @Html.LabelFor(m => m.File)
+                        @Html.TextBoxFor(m => m.File,  new { type = "file", @class = "form-control" })
+                    </div>
+                    <div class="col-md-6">
+                        @Html.LabelFor(m => m.Version)
+                        @Html.TextBoxFor(m => m.Version,  new {  @class = "form-control" })
+                    </div>
+
+                    <div class="col-md-6">
+                        @Html.LabelFor(m => m.Patch)
+                        @Html.TextBoxFor(m => m.Patch,  new {  @class = "form-control", value = DateTime.Today.ToString("yyyy-MM-dd") })
+                    </div>
+                    <div class="col-md-6">
+                        @Html.LabelFor(m => m.Date)
+                        @Html.EditorFor(m => m.Date,  new { type = "date",  @class = "form-control" })
+                    </div>
+                    <div class="col-md-6">
+                        <input class="form-check-input input-group" type="checkbox" value="@Model.Locked" id="Locked" name="Locked">
+                        <label class="form-check-label" for="Locked">
+                            Bloqueada para atualização
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <input type="submit" value="Salvar" class="btn btn-primary" />
+                <div>
+                    <button type="button" class="btn btn-danger" onclick="$('.modal').hide(1000)">Fechar</button>
+                </div>
+
+                @section Scripts
+                    {
+                    @{
+                        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+                    }
+                }
+                </div>
+            </div>
+            <script type="text/javascript">
+                $(document).ready(function() {
+                    $("#Date").addClass("form-control")
+                });
+            </script>
+        </form>
+    </div>

@@ -1,0 +1,66 @@
+﻿@{
+    ViewData["Title"] = "Index";
+}
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+<h1>Versões</h1>
+
+<div>
+    @if (ViewData["Versions"] != null)
+    {
+        int i = 1;
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Versão</th>
+                    <th scope="col">Patch</th>
+                    <th scope="col">Data</th>
+                    <th scope="col">Bloqueada</th>
+                    <th scope="col"><button class="btn btn-primary edit-version">Novo</button></th>
+                </tr>
+            </thead>
+            <tbody>
+
+                @foreach (var version in (ViewData["Versions"] as List<VersionViewModel>))
+                {
+                    <tr>
+                        <th scope="row">@i</th>
+                        <td>@version.Version</td>
+                        <td>@version.Patch</td>
+                        <td>@version.Date.ToString("dd/MM/yyyy")</td>
+                        <td>@version.IsLocked()</td>
+                        <td><button class="btn btn-primary edit-version" data-id="@version.Id">Editar</button></td>
+                    </tr>
+                    i++;
+                }
+            </tbody>
+        </table>
+        <nav aria-label="Page navigation example">
+            <ul class="pagination">
+                <li class="page-item"><a class="page-link" href="#">Anterior</a></li>
+                <li class="page-item"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item"><a class="page-link" href="#">Próximo</a></li>
+            </ul>
+        </nav>
+
+    }
+
+    <div class="modal in" tabindex="-1" role="dialog" id="edit-version">
+        <div id="edit-version-container"></div>
+    </div>
+
+    <script type="text/javascript">
+        $(document).ready(function() {
+            $('.edit-version').click(function() {
+                var url = "/Version/EditVersion"; 
+                var id = $(this).attr('data-id');
+                $('#edit-version-container').load(url + '/' + id);
+                $('.modal').show(2000);
+            });
+        });
+    </script>
+</div>

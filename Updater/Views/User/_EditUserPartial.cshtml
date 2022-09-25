@@ -1,0 +1,73 @@
+﻿@model Updater.Models.UserViewModel
+
+<div class="modal-dialog" role="document" id="dialogo">
+    <form asp-controller="User" asp-action="EditUser" enctype="multipart/form-data"
+          data-ajax="true" data-ajax-method="POST" data-ajax-confirm="Deseja Continuar?" data-ajax-complete="completed">
+        @Html.AntiForgeryToken();
+
+        <style>
+            .modal-content,
+            .modal-dialog {
+                height: calc(90vh - 100px);
+                max-width: calc(99vw - 100px);
+            }
+
+            .modal-header {
+                display: initial;
+            }
+        </style>
+        <div class="modal-content text-center">
+            <hr />
+            <div class="modal-header">
+                @if (Model.Id != Guid.Empty)
+                {
+                    <h3 id="myModalLabel">Editando Usuário</h3>
+                }
+                else
+                {
+                    <h3 id="myModalLabel">Criando Usuário</h3>
+                }
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <label>@ViewData["error"]?.ToString() </label>
+                    <div class="col-md-6">
+                        @Html.LabelFor(m => m.Username)
+                        @Html.TextBoxFor(m => m.Username,  new {  @class = "form-control" })
+                    </div>
+                    <div class="col-md-6">
+                        @Html.LabelFor(m => m.Password)
+                        @Html.PasswordFor(m => m.Password,  new {  @class = "form-control" })
+                    </div>
+                    <div class="col-md-6">
+                        @Html.LabelFor(m => m.Email)
+                        @Html.TextBoxFor(m => m.Email,  new { type="email", @class = "form-control" })
+                    </div>
+                    <div class="col-md-6">
+                        @Html.LabelFor(m => m.Role)
+                        @Html.DropDownList("Role", Html.GetEnumSelectList(typeof(Enums.UserRole)), htmlAttributes: new { @class = "form-control"})
+                    </div>
+                    <div class="col-md-6">
+                        <input class="form-check-input input-group" type="checkbox" value="@Model.Locked" id="Locked" name="Locked">
+                        <label class="form-check-label" for="Locked">
+                            Bloquear usuário
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <input type="submit" value="Salvar" class="btn btn-primary" />
+                <div>
+                    <button type="button" class="btn btn-danger" onclick="$('.modal').hide(1000)">Fechar</button>
+                </div>
+
+                @section Scripts
+                    {
+                    @{
+                        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+                    }
+                }
+                </div>
+            </div>
+        </form>
+    </div>
