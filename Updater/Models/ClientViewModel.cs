@@ -24,6 +24,9 @@ namespace Updater.Models
         [Required(ErrorMessage = "Nome do serviço é obrigatório")]
         [Display(Name = "Nome do serviço")]
         public string ServiceName { get; set; }
+        public DateTime Creation { get; set; }
+
+        public IEnumerable<User> Users { get; set; }
 
         public static implicit operator ClientViewModel(Client clientmodel)
         {
@@ -37,6 +40,8 @@ namespace Updater.Models
                 SiteUser = clientmodel.SiteUser,
                 ServiceName = clientmodel.ServiceName,
                 AppPoolName = clientmodel.AppPoolName,
+                Creation = clientmodel.Creation,
+                Users = clientmodel.Users.Select(x=> x.User).ToList()
             };
         }
 

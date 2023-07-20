@@ -2,8 +2,8 @@
 
 <div class="modal-dialog" role="document" id="dialogo">
     <form asp-controller="Client" asp-action="EditClient" enctype="multipart/form-data"
-          data-ajax="true" data-ajax-method="POST" data-ajax-confirm="Deseja Continuar?" data-ajax-complete="completed">
-        @Html.AntiForgeryToken();
+          data-ajax="true" data-ajax-begin="loadSpinner" data-ajax-method="POST" data-ajax-confirm="Deseja Continuar?" data-ajax-complete="completed">
+        @Html.AntiForgeryToken()
 
         <style>
             .modal-content,
@@ -14,6 +14,10 @@
 
             .modal-header {
                 display: initial;
+            }
+
+            .select2-container {
+                z-index: 100000;
             }
         </style>
         <div class="modal-content text-center">
@@ -30,44 +34,75 @@
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <label>@ViewData["error"]?.ToString() </label>
+                    @Html.ValidationSummary()
+
                     <div class="col-md-6">
                         @Html.LabelFor(m => m.Name)
-                        @Html.TextBoxFor(m => m.Name,  new {  @class = "form-control" })
+                        @Html.TextBoxFor(m => m.Name,  new {  @class = "form-control", required = "required" })
                     </div>
                     <div class="col-md-6">
                         @Html.LabelFor(m => m.Server)
-                        @Html.TextBoxFor(m => m.Server,  new {  @class = "form-control" })
+                        @Html.TextBoxFor(m => m.Server,  new {  @class = "form-control", required = "required" })
                     </div>
                     <div class="col-md-6">
                         @Html.LabelFor(m => m.ServiceName)
-                        @Html.TextBoxFor(m => m.ServiceName,  new {  @class = "form-control" })
+                        @Html.TextBoxFor(m => m.ServiceName,  new {  @class = "form-control" , required = "required"})
                     </div>
                     <div class="col-md-6">
                         @Html.LabelFor(m => m.AppPoolName)
-                        @Html.TextBoxFor(m => m.AppPoolName,  new {  @class = "form-control" })
+                        @Html.TextBoxFor(m => m.AppPoolName,  new {  @class = "form-control", required = "required" })
                     </div>
                     <div class="col-md-6">
                         @Html.LabelFor(m => m.SiteUser)
-                        @Html.TextBoxFor(m => m.SiteUser,  new {  @class = "form-control" })
+                        @Html.TextBoxFor(m => m.SiteUser,  new {  @class = "form-control", required = "required" })
                     </div>
                     <div class="col-md-6">
                         @Html.LabelFor(m => m.SitePass)
-                        @Html.TextBoxFor(m => m.SitePass,  new { type="password", @class = "form-control" })
+                        @Html.TextBoxFor(m => m.SitePass,  new { type="password", @class = "form-control", required = "required" })
                     </div>
                     <div class="col-md-6">
-                        <input class="form-check-input input-group" type="checkbox" value="@Model.Locked" id="Locked" name="Locked"/>
+                        <input class="form-check-input input-group" type="checkbox" checked="@Model.Locked" value="@Model.Locked" id="Locked" name="Locked" />
                         <label class="form-check-label" for="Locked">
                             Bloquear cliente
                         </label>
                     </div>
+
+                </div>
+                <div class="row  mb-5 mt-1">
+                    <div class="col-12">
+                        <label class="form-check-label" for="client-users">
+                            Usuário do cliente
+                        </label>
+                        <select class="form-control" id="client-users" name="client-users" required style="90vw">
+                            @{
+                                if (Model.Users?.Count() <= 0)
+                                {
+                                    <option selected="selected" value="@Guid.Empty">Nenhum usuário disponível</option>
+                                }
+                                else if (Model.Users != null)
+                                {
+                                    @foreach (var item in Model.Users)
+                                    {
+                                        @if (item != null)
+                                        {
+                                            <option selected="selected" value="@item.Id">@item.Username</option>
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    <option value="@Guid.Empty">Selecione</option>
+                                }
+                            }
+                        </select>
+                    </div>
                 </div>
             </div>
-
+            <div class="loading" id="loader-spinner" style="display:none"></div>
             <div class="modal-footer">
                 <input type="submit" value="Salvar" class="btn btn-primary" />
                 <div>
-                    <button type="button" class="btn btn-danger" onclick="$('.modal').hide(1000)">Fechar</button>
+                    <button type="button" class="btn btn-danger" onclick="$('.modal').hide(1000, ()=> location.reload())">Fechar</button>
                 </div>
 
                 @section Scripts
@@ -78,5 +113,7 @@
                 }
             </div>
         </div>
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     </form>
 </div>

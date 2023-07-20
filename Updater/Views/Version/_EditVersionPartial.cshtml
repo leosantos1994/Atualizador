@@ -2,9 +2,8 @@
 
 <div class="modal-dialog" role="document" id="dialogo">
     <form asp-controller="Version" asp-action="EditVersion" enctype="multipart/form-data"
-          data-ajax="true" data-ajax-method="POST" data-ajax-confirm="Deseja Continuar?" data-ajax-complete="completed">
-        @Html.AntiForgeryToken();
-
+          data-ajax="true" data-ajax-begin="loadSpinner" data-ajax-method="POST" data-ajax-confirm="Deseja Continuar?" data-ajax-complete="completed">
+        @Html.AntiForgeryToken()
         <style>
             .modal-content,
             .modal-dialog {
@@ -16,6 +15,8 @@
                 display: initial;
             }
         </style>
+        <div class="loading" id="loader-spinner" style="display:none"></div>
+
         <div class="modal-content text-center">
             <hr />
             <div class="modal-header">
@@ -30,10 +31,17 @@
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <label>@ViewData["error"]?.ToString() </label>
+                    @Html.ValidationSummary()
+
                     <div class="col-md-6">
                         @Html.LabelFor(m => m.File)
                         @Html.TextBoxFor(m => m.File,  new { type = "file", @class = "form-control" })
+                        @{
+                            if (Model.VersionFileId != Guid.Empty)
+                            {
+                                <a class="" href="@Html.Raw(Updater.Helper.BaseURL.URL + "/api/Update/Download/" + @Model.VersionFileId) " download>Clique aqui para baixar o pacote existente</a>
+                            }
+                        }
                     </div>
                     <div class="col-md-6">
                         @Html.LabelFor(m => m.Version)
@@ -49,7 +57,7 @@
                         @Html.EditorFor(m => m.Date,  new { type = "date",  @class = "form-control" })
                     </div>
                     <div class="col-md-6">
-                        <input class="form-check-input input-group" type="checkbox" value="@Model.Locked" id="Locked" name="Locked">
+                        <input class="form-check-input input-group" type="checkbox" checked="@Model.Locked" value="@Model.Locked" id="Locked" name="Locked">
                         <label class="form-check-label" for="Locked">
                             Bloqueada para atualização
                         </label>
@@ -59,7 +67,7 @@
             <div class="modal-footer">
                 <input type="submit" value="Salvar" class="btn btn-primary" />
                 <div>
-                    <button type="button" class="btn btn-danger" onclick="$('.modal').hide(1000)">Fechar</button>
+                    <button type="button" class="btn btn-danger" onclick="$('.modal').hide(1000, ()=> location.reload())">Fechar</button>
                 </div>
 
                 @section Scripts

@@ -18,6 +18,8 @@ namespace Updater.Models
         public string? Email { get; set; } = string.Empty;
         [Display(Name = "Bloqueado")]
         public bool Locked { get; set; }
+        public DateTime Creation { get; set; }
+
         public Client Client { get; set; }
 
 
@@ -31,7 +33,8 @@ namespace Updater.Models
                 Password = userModel.Password,
                 Role = userModel.Role,
                 Locked = userModel.Locked,
-                Client = userModel.Client,
+                Creation = userModel.Creation,
+                Client = userModel.Clients?.FirstOrDefault()?.Client,
             };
         }
 

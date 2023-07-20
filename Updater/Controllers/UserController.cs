@@ -1,13 +1,15 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Linq.Expressions;
 using Updater.Models;
 using Updater.Repository;
 using Updater.Repository.Interfaces;
+using X.PagedList;
 
 namespace Updater.Controllers
 {
     public class UserController : Controller
     {
-        private IUserRepository _UserRepository;
+        private IUserClientRepository _UserRepository;
         public UserController(AppDBContext context)
         {
             this._UserRepository = new UserRepository(context);
@@ -16,10 +18,23 @@ namespace Updater.Controllers
         // GET: VersaoController
         [ValidateLoggedUser]
         [ValidateLoggedUserAdm]
-        public ActionResult Index()
+        public ActionResult Index(int page = 1)
         {
-            ViewData["Users"] = GetViewModel().ToList();
+            var users = GetViewModel().OrderByDescending(x => x.Creation).ToPagedList(page, 10);
+            foreach (var x in users)
+            {
+                x.Role = (x.Role == Constants.Role_Client ? "Cliente" : "Administrador");
+            }
+            ViewData["Users"] = users;
             return View();
+        }
+
+        [HttpGet]
+        [ValidateLoggedUser]
+        [ValidateLoggedUserAdm]
+        public JsonResult AllClientUsers()
+        {
+            return Json(GetViewModel(x => x.Role == Constants.Role_Client && x.Clients == null).ToList().Select(x => new { text = x.Username, id = x.Id }));
         }
 
         [HttpGet]
@@ -27,6 +42,8 @@ namespace Updater.Controllers
         [ValidateLoggedUserAdm]
         public ActionResult EditUser(Guid id)
         {
+            ModelState.Clear();
+
             if (id != Guid.Empty)
             {
                 return base.PartialView("_EditUserPartial", new Models.User().GetUserViewModel(_UserRepository.Get(id)));
@@ -42,6 +59,8 @@ namespace Updater.Controllers
         [ValidateLoggedUserAdm]
         public ActionResult EditUser(UserViewModel viewModel)
         {
+            ModelState.Clear();
+
             try
             {
                 if (ValidateModel(viewModel))
@@ -55,23 +74,23 @@ namespace Updater.Controllers
                     if (viewModel.Id == Guid.Empty)
                     {
                         _UserRepository.Insert(userModel);
-                        ViewData["error"] = "Usuário cadastrado com sucesso.";
+                        ModelState.AddModelError("", "Usuário cadastrado com sucesso.");
                     }
                     else
                     {
                         _UserRepository.Update(userModel);
 
-                        ViewData["error"] = "Usuário alterado";
+                        ModelState.AddModelError("", "Usuário alterado.");
                     }
                 }
                 else
                 {
-                    ViewData["error"] = "Verifique as informações.";
+                    ModelState.AddModelError("", "Verifique as informações.");
                 }
             }
             catch (Exception ex)
             {
-                ViewData["error"] = "Erro: " + ex.Message;
+                ModelState.AddModelError("", "Erro: " + ex.Message);
             }
             return PartialView("_EditUserPartial", viewModel);
         }
@@ -81,22 +100,37 @@ namespace Updater.Controllers
             switch ((Enums.UserRole)int.Parse(viewModel.Role))
             {
                 case Enums.UserRole.client:
-                    viewModel.Role = "client";
+                    viewModel.Role = Constants.Role_Client;
                     break;
                 case Enums.UserRole.sysadm:
-                    viewModel.Role = "sysadm";
+                    viewModel.Role = Constants.Role_ADM;
                     break;
                 default:
-                    viewModel.Role = "client";
+                    viewModel.Role = Constants.Role_Client;
                     break;
             }
             viewModel.Locked = HttpContext.Request.Form["Locked"].ToString().ToLower() == "on" ? true : false;
+
+            if (string.IsNullOrEmpty(viewModel.Password))
+                throw new Exception("Senha não foi informada");
+
+            if (string.IsNullOrEmpty(viewModel.Username))
+                throw new Exception("Usuário não foi informado");
+
             return true;
         }
 
         private IEnumerable<UserViewModel> GetViewModel()
         {
             foreach (var item in _UserRepository.GetAll().ToList())
+            {
+                yield return item;
+            }
+        }
+
+        private IEnumerable<UserViewModel> GetViewModel(Expression<Func<Models.User, bool>> predicate)
+        {
+            foreach (var item in _UserRepository.GetAll(predicate).ToList())
             {
                 yield return item;
             }

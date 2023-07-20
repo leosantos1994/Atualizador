@@ -7,20 +7,21 @@ namespace Updater.Models
     {
         [Required(ErrorMessage = "Versão é obrigatória")]
         [Display(Name = "Versão")]
-        public string Version { get; set; }
+        public string FileName { get; set; } = "";
+        public string Version { get; set; } = "";
         [Required(ErrorMessage = "Patch é obrigatório")]
         [Display(Name = "Patch")]
-        public string Patch { get; set; }
+        public string Patch { get; set; } = "";
         [Required(ErrorMessage = "Data é obrigatória")]
         [DataType(DataType.Date)]
         [DisplayFormat(DataFormatString = "{0:yyyy-MM-dd}", ApplyFormatInEditMode = true)]
         [Display(Name = "Data")]
-        public DateTime Date { get; set; }
+        public DateTime Date { get; set; } = DateTime.Today;
         [Display(Name = "Bloqueada")]
         public bool Locked { get; set; }
         [Required(ErrorMessage = "Arquivo é obrigatório")]
         [Display(Name = "Arquivos (.ZIP)")]
-        public IFormFile File { get; set; }
+        public IFormFile? File { get; set; } = null;
         public Guid VersionFileId { get; set; }
 
         public static implicit operator VersionViewModel(Version versionmodel)
@@ -32,7 +33,7 @@ namespace Updater.Models
                 Locked = versionmodel.Locked,
                 Version = versionmodel.ProductVersion,
                 Patch = versionmodel.Patch,
-                VersionFileId = versionmodel.VersionFile.Id,
+                VersionFileId = versionmodel?.VersionFile?.Id ?? Guid.Empty,
             };
         }
         public string IsLocked()

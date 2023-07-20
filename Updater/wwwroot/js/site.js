@@ -3,6 +3,15 @@
 
 // Write your JavaScript code.
 completed = function (xhr) {
-    console.log(xhr);
+    var loader = $('.loading')
+    if (loader != undefined)
+        $(loader).hide();
+
     $("#edit-version-container").html(xhr.responseText)
+}
+
+loadSpinner = function (xhr) {
+    var loader = $('.loading')
+    if (loader != undefined)
+        $(loader).show();
 }

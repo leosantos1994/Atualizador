@@ -42,6 +42,7 @@ namespace UpdaterService.Handler
                 process.Start();
 
 
+                
                 commandResult.Append(process.StandardOutput.ReadToEnd());
                 commandErrors.Append(process.StandardError.ReadToEnd());
 

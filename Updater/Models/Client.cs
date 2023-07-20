@@ -9,8 +9,9 @@
         public string SitePass { get; set; }
         public string ServiceName { get; set; }
         public string AppPoolName { get; set; }
+        public DateTime Creation { get; set; }
 
-        public virtual ICollection<User> Users { get; set; }
+        public virtual ICollection<ClientUser> Users { get; set; }
 
 
         public static implicit operator Client(ClientViewModel clientviewmodel)

@@ -1,21 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.IO.Compression;
 using System.Management;
 using System.ServiceProcess;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
 using UpdaterService.Model;
 
 namespace UpdaterService.Handler
 {
     public class ServiceUpdateHandler : BaseUpdateHandler
     {
-        MidModel.ServiceModel service;
-        public ServiceUpdateHandler(MidModel.ServiceModel _service, ConfigSettings config) : base(config)
+        public ServiceUpdateHandler(ConfigSettings config) : base(config)
         {
-            service = _service;
         }
 
         private bool IsValid(out string path)
@@ -23,25 +16,42 @@ namespace UpdaterService.Handler
             path = "";
             try
             {
-                ResponseService.Add($"Iniciando validações do serviço. {service.Name} em: {DateTime.UtcNow}");
+                if (string.IsNullOrEmpty(ServiceModelHandler._service.ServiceName))
+                    throw new Exception("Nome do serviço não informado.");
 
-                ManagementObjectSearcher searcher = new ManagementObjectSearcher("SELECT * FROM Win32_Service");
+                Console.WriteLine($"Iniciando validações do serviço. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow}");
+
+                ResponseService.Add($"Iniciando validações do serviço. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow}");
+
+                ManagementObjectSearcher searcher = new("SELECT * FROM Win32_Service");
                 ManagementObjectCollection collection = searcher.Get();
 
+                Console.WriteLine("Varrendo os serviços");
                 foreach (ManagementObject obj in collection)
                 {
-                    if (!Convert.ToString(obj[propertyName: "Name"]).Equals(service.Name))
+                    if (!Convert.ToString(obj[propertyName: "Name"]).Equals(ServiceModelHandler._service.ServiceName))
                         continue;
-                    path = Path.GetDirectoryName(Convert.ToString(obj[propertyName: "PathName"]));
+
+                    path = obj[propertyName: "PathName"].ToString().Substring(1).TrimEnd('\"');
                 }
 
-                if (Directory.Exists(path)) return true;
+                Console.WriteLine("Caminho do serviço completo localizado " + path);
+                if (File.Exists(path))
+                {
+                    path = new FileInfo(path).DirectoryName;
+
+                    Console.WriteLine("Caminho do serviço localizado " + path);
+
+                    return true;
+                }
 
                 else throw new DirectoryNotFoundException("Caminho do serviço não localizado ou não acessível.");
             }
             catch (Exception e)
             {
-                ResponseService.Add($"Falha ao localizar serviço. {service.Name} em: {DateTime.UtcNow} Detalhe: {JsonSerializer.Serialize(e)}");
+                Console.WriteLine($"Falha ao localizar serviço. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow} Detalhe: {e.Message}");
+
+                ResponseService.Add($"Falha ao localizar serviço. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow} Detalhe: {e.Message}");
             }
             return false;
         }
@@ -53,38 +63,69 @@ namespace UpdaterService.Handler
 
             if (start)
             {
-                ResponseService.Add($"Iniciando serviço. {service.Name} em: {DateTime.UtcNow}");
-                serviceController.Start();
-                ResponseService.Add($"Serviço iniciado. {service.Name} em: {DateTime.UtcNow}");
+                Console.WriteLine($"Iniciando serviço. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow}");
+                ResponseService.Add($"Iniciando serviço. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow}");
+
+                if (serviceController.Status != ServiceControllerStatus.Running)
+                {
+                    serviceController.Start();
+
+                    //serviceController.WaitForStatus(ServiceControllerStatus.Running, timeout);
+                }
+
+                Console.WriteLine($"Serviço iniciado. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow}");
+                ResponseService.Add($"Serviço iniciado. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow}");
             }
             else
             {
-                ResponseService.Add($"Parando serviço. {service.Name} em: {DateTime.UtcNow}");
-                serviceController.Stop();
-                ResponseService.Add($"Serviço parado. {service.Name} em: {DateTime.UtcNow}");
+                Console.WriteLine($"Parando serviço. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow}");
+                ResponseService.Add($"Parando serviço. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow}");
+
+                if (serviceController.Status != ServiceControllerStatus.Stopped)
+                {
+                    serviceController.Stop();
+                    //serviceController.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
+                }
+
+                Console.WriteLine($"Serviço parado. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow}");
+                ResponseService.Add($"Serviço parado. {ServiceModelHandler._service.ServiceName} em: {DateTime.UtcNow}");
             }
 
-            serviceController.WaitForStatus(ServiceControllerStatus.Stopped, timeout);
         }
 
         public void Init()
         {
-            string rootUpVerionFolder = "";
-
             bool isValid = IsValid(out string rootFolder);
 
             if (!isValid)
             {
-                ResponseService.Add($"Configurações para atualização inválidas. {service.Name}"); return;
+                Console.WriteLine($"Configurações para atualização inválidas. {ServiceModelHandler._service.ServiceName}"); return;
             }
 
-            Service(service.Name, false);
+            Service(ServiceModelHandler._service.ServiceName, false);
 
-            Backup(service.Name, rootFolder);
+            Backup(ServiceModelHandler._service.ServiceName, rootFolder);
 
-            Update(rootFolder, rootUpVerionFolder);
+            ServiceModelHandler.ServiceFolderPath = rootFolder;
 
-            Service(service.Name, true);
+            string rootUpVersionFolder = ServiceModelHandler._service.PatchFilesPath.Replace(".zip", "");
+
+            ZipFile.ExtractToDirectory(ServiceModelHandler._service.PatchFilesPath, rootUpVersionFolder, true);
+
+            rootUpVersionFolder = Path.Combine(rootUpVersionFolder, "bin");
+
+            Console.WriteLine("Caminho dos binários " + rootUpVersionFolder);
+
+            if (!Path.Exists(rootUpVersionFolder))
+            {
+                throw new Exception("Binários não localizados, atualização dos serviços não concluída.");
+            }
+
+            UpdateService(rootFolder, rootUpVersionFolder);
+
+            Service(ServiceModelHandler._service.ServiceName, true);
+
+            Console.WriteLine("Serviço atualizado com sucesso.");
         }
     }
 }

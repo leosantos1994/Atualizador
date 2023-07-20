@@ -7,8 +7,9 @@
         public string Role { get; set; } 
         public string? Email { get; set; }
         public bool Locked { get; set; }
-        public Guid? ClientId { get; set; }
-        public Client Client { get; set; }
+        public DateTime Creation { get; set; }
+
+        public virtual ICollection<ClientUser> Clients { get; set; }
 
 
         public static implicit operator User(UserViewModel userViewModel)

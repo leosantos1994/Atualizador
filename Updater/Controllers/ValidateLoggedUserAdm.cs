@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Updater.Models;
 
 namespace Updater.Controllers
 {
@@ -9,7 +10,7 @@ namespace Updater.Controllers
         {
             try
             {
-                if(!context.HttpContext.User.Claims.Any(x => x.Type.ToLower().EndsWith("role") && x.Value.ToLower().Equals("sysadm")))
+                if(!context.HttpContext.User.Claims.Any(x => x.Type.ToLower().EndsWith("role") && x.Value.ToLower().Equals(Constants.Role_ADM)))
                     context.Result = new RedirectToRouteResult(
                     new RouteValueDictionary
                     {

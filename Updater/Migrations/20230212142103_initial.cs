@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Updater.Migrations
 {
-    public partial class Initial : Migration
+    public partial class initial : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -14,9 +14,13 @@ namespace Updater.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Server = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Server = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Locked = table.Column<bool>(type: "bit", nullable: false)
+                    Locked = table.Column<bool>(type: "bit", nullable: false),
+                    SiteUser = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    SitePass = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ServiceName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    AppPoolName = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -28,18 +32,41 @@ namespace Updater.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    VersionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     IsService = table.Column<bool>(type: "bit", nullable: false),
                     IsPool = table.Column<bool>(type: "bit", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    ServiceName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    PoolName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     SiteUser = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     SitePass = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     PatchFilesPath = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    ReleaseFilePath = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    HasUpdate = table.Column<bool>(type: "bit", nullable: false)
+                    HasUpdate = table.Column<bool>(type: "bit", nullable: false),
+                    ClientId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ClientName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    VersionName = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    VersionFileId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    ScheduledDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ScheduleProgress = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Service", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "User",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Username = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Password = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Role = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Locked = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_User", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -58,23 +85,26 @@ namespace Updater.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "User",
+                name: "ClientUser",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Username = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Password = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Role = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ClientId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
+                    ClientId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_User", x => x.Id);
+                    table.PrimaryKey("PK_ClientUser", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_User_Client_ClientId",
+                        name: "FK_ClientUser_Client_ClientId",
                         column: x => x.ClientId,
                         principalTable: "Client",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ClientUser_User_UserId",
+                        column: x => x.UserId,
+                        principalTable: "User",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -84,7 +114,7 @@ namespace Updater.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    File = table.Column<byte[]>(type: "varbinary(max)", nullable: false),
+                    File = table.Column<byte[]>(type: "varbinary(900)", nullable: false),
                     FileName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     VersionId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
@@ -100,9 +130,19 @@ namespace Updater.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_User_ClientId",
-                table: "User",
+                name: "IX_ClientUser_ClientId",
+                table: "ClientUser",
                 column: "ClientId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ClientUser_UserId",
+                table: "ClientUser",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_VersionFile_File",
+                table: "VersionFile",
+                column: "File");
 
             migrationBuilder.CreateIndex(
                 name: "IX_VersionFile_VersionId",
@@ -114,16 +154,19 @@ namespace Updater.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Service");
+                name: "ClientUser");
 
             migrationBuilder.DropTable(
-                name: "User");
+                name: "Service");
 
             migrationBuilder.DropTable(
                 name: "VersionFile");
 
             migrationBuilder.DropTable(
                 name: "Client");
+
+            migrationBuilder.DropTable(
+                name: "User");
 
             migrationBuilder.DropTable(
                 name: "Version");

@@ -1,23 +1,23 @@
-﻿using System.Linq.Expressions;
+﻿using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 using System.Security.Cryptography;
 using System.Text;
 using Updater.Repository.Interfaces;
 
 namespace Updater.Repository
 {
-    public class UserRepository : IUserRepository
+    public class UserRepository : IUserClientRepository
     {
         AppDBContext _contextDB;
         string AUTH_TOKEN = "a1jaWhyK08rE5e1mrC8U4P+SBGTOC1wK3mUKXOoaJ6s=";
         public UserRepository(AppDBContext context)
         {
             this._contextDB = context;
-            _contextDB.Database.EnsureCreated();
         }
 
         public Models.User Get(Guid Id)
         {
-            return _contextDB.User.FirstOrDefault(x => x.Id.Equals(Id));
+            return _contextDB.User.Include(x => x.Clients).FirstOrDefault(x => x.Id.Equals(Id));
         }
 
         public IEnumerable<Models.User> GetAll()
@@ -27,7 +27,7 @@ namespace Updater.Repository
 
         public IEnumerable<Models.User> GetAll(Expression<Func<Models.User, bool>> predicate)
         {
-            return _contextDB.User.Where(predicate).AsEnumerable();
+            return _contextDB.User.Include(x=> x.Clients).Where(predicate).AsEnumerable();
         }
 
         public bool Any(Expression<Func<Models.User, bool>> predicate)
@@ -35,16 +35,19 @@ namespace Updater.Repository
             return _contextDB.User.Any(predicate);
         }
 
-        public void Insert(Models.User model)
+        public void Insert(Models.User model, bool saveChanges = true)
         {
             _contextDB.User.Add(model);
-            _contextDB.SaveChanges();
+            if (saveChanges)
+                _contextDB.SaveChanges();
         }
 
-        public void Update(Models.User model)
+        public void Update(Models.User model, bool saveChanges = true)
         {
+            _contextDB.ChangeTracker.Clear();
             _contextDB.User.Update(model);
-            _contextDB.SaveChanges();
+            if (saveChanges)
+                _contextDB.SaveChanges();
         }
 
         public string HashPass(string pass)

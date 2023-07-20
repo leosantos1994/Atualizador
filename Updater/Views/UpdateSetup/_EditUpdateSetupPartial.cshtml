@@ -1,0 +1,100 @@
+﻿@model Updater.Models.UpdateSetupViewModel
+
+<div class="modal-dialog" role="document" id="dialogo">
+    <form asp-controller="UpdateSetup" asp-action="EditUpdate" enctype="multipart/form-data"
+          data-ajax="true" data-ajax-begin="loadSpinner" data-ajax-method="POST" data-ajax-confirm="Deseja Continuar?" data-ajax-complete="completed">
+        @Html.AntiForgeryToken();
+
+        <style>
+            .modal-content,
+            .modal-dialog {
+                height: calc(90vh - 100px);
+                max-width: calc(99vw - 100px);
+            }
+
+            .modal-header {
+                display: initial;
+            }
+        </style>
+        <div class="modal-content text-center">
+            <hr />
+            <div class="modal-header">
+                @if (Model.Id != Guid.Empty)
+                {
+                    <h3 id="myModalLabel">Editando Agendamento Atualização</h3>
+                }
+                else
+                {
+                    <h3 id="myModalLabel">Agendamento Atualização</h3>
+                }
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <label>@ViewData["error"]?.ToString() </label>
+                    <div class="col-md-6">
+                        <input class="form-check-input input-group" checked="@Model.IsPool" style="border-bottom: groove;" type="checkbox" value="@Model.IsPool" id="IsPool" name="IsPool">
+                        <label class="form-check-label" for="IsPool">
+                            Atualizar Site
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <input class="form-check-input input-group" checked="@Model.IsService" style="border-bottom: groove;" type="checkbox" value="@Model.IsService" id="IsService" name="IsService">
+                        <label class="form-check-label" for="IsService">
+                            Atualizar Serviço
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        @Html.EditorFor(m => m.ScheduledDate,  new { required= "required", type = "date",  @class = "form-control" })
+                        @Html.LabelFor(m => m.ScheduledDate)
+                    </div>
+                    <div class="col-md-6">
+                        <select class="form-control" id="client" name="client" required>
+                            @foreach (var item in Model.Clients ?? new List<Client>())
+                            {
+                                <option selected="selected" value="@item.Id">@item.Name</option>
+                            }
+                        </select>
+                        <label class="form-check-label" for="client">
+                            Cliente
+                        </label>
+                    </div>
+                    <div class="col-md-6">
+                        <select class="form-control" id="version" name="version" required>
+                            @{
+                                foreach (var item in Model.Versions ?? new List<Updater.Models.Version>())
+                                {
+                                    <option selected="selected" value="@item.Id">@(item.ProductVersion + " - " + item.Patch)  </option>
+                                }
+                            }
+                        </select>
+                        <label class="form-check-label" for="version">
+                            Versão
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <input type="submit" value="Salvar" class="btn btn-primary" />
+                <div>
+                    <button type="button" class="btn btn-danger" onclick="$('.modal').hide(1000, ()=> location.reload())">Fechar</button>
+                </div>
+
+                @section Scripts
+                    {
+                    @{
+                        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+                    }
+                }
+            </div>
+            <div class="loading" id="loader-spinner" style="display:none"></div>
+        </div>
+        <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+        <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+        <script type="text/javascript">
+            $(document).ready(function () {
+                $("#ScheduledDate").addClass("form-control")
+            })
+        </script>
+
+    </form>
+</div>

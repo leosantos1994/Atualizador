@@ -1,4 +1,5 @@
-﻿using Updater.Models;
+﻿using System;
+using Updater.Models;
 using Updater.Repository.Interfaces;
 
 namespace Updater.Repository
@@ -9,7 +10,6 @@ namespace Updater.Repository
         public VersionFileRepository(AppDBContext context)
         {
             this._contextDB = context;
-            _contextDB.Database.EnsureCreated();
         }
 
         public VersionFile Get(Guid Id)
@@ -19,7 +19,17 @@ namespace Updater.Repository
 
         public VersionFile GetByVersion(Guid versionId)
         {
-            return _contextDB.VersionFile.FirstOrDefault(x => x.VersionId.Equals(versionId));
+            return _contextDB.VersionFile.Select(x => new VersionFile() { FileName = x.FileName, Id = x.Id, VersionId = x.VersionId }).FirstOrDefault(x => x.VersionId.Equals(versionId));
+        }
+
+        public string GetFileName(Guid versionId)
+        {
+            return _contextDB.VersionFile.Where(x => x.VersionId == versionId).Select(x => new VersionFile() { FileName = x.FileName, VersionId = x.Id }).FirstOrDefault().FileName;
+        }
+
+        public Guid GetIdByVersion(Guid versionId)
+        {
+            return _contextDB.VersionFile.Where(x => x.VersionId.Equals(versionId)).Select(x => x.Id).FirstOrDefault();
         }
 
         public void Insert(VersionFile model)
@@ -28,8 +38,15 @@ namespace Updater.Repository
             _contextDB.SaveChanges();
         }
 
+        public void Delete(VersionFile model)
+        {
+            _contextDB.VersionFile.Remove(model);
+            _contextDB.SaveChanges();
+        }
+
         public void Update(VersionFile model)
         {
+            _contextDB.ChangeTracker.Clear();
             _contextDB.VersionFile.Update(model);
             _contextDB.SaveChanges();
         }

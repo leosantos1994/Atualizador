@@ -8,7 +8,7 @@ namespace Updater.Models
         public string Patch { get; set; }
         public DateTime Date { get; set; }
         public bool Locked { get; set; }
-        public VersionFile VersionFile { get; set; }
+        public virtual VersionFile VersionFile { get; set; }
 
 
         public static implicit operator Version(VersionViewModel versionviewmodel)

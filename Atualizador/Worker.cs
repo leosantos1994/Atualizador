@@ -1,5 +1,7 @@
+using Microsoft.Web.Administration;
 using MidModel;
-using System.Text;
+using System.IO.Compression;
+using System.Xml;
 using UpdaterService.Handler;
 using UpdaterService.Model;
 
@@ -10,56 +12,90 @@ namespace UpdaterService
         private readonly ILogger<Worker> _logger;
         private readonly List<string> APILog = new List<string>();
         ConfigSettings _configSettings = new ConfigSettings();
-
+        private static bool IsTaskCompleted = true;
         public Worker(ILogger<Worker> logger, IConfiguration config)
         {
             _logger = logger;
             config.GetSection(ConfigSettings.Config).Bind(_configSettings);
         }
-
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+
+            while (IsTaskCompleted)
             {
-                try
+                if (IsTaskCompleted)
                 {
-                    _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+                    try
+                    {
 
-                    await Task.Delay(30000, stoppingToken);
+                        IsTaskCompleted = false;
 
-                    _logger.LogInformation("Seeking update at: {time}", DateTimeOffset.Now);
+                        _logger.LogInformation("Seeking update at: {time}", DateTimeOffset.Now);
 
-                    var request = APIHandler.FindUpdateRequest(_configSettings);
+                        var request = APIHandler.FindUpdateRequest(_configSettings, out string error);
 
-                    if (request.HasUpdate)
-                        ExecuteOperation(request);
-                    ExecuteOperation(new MidModel.ServiceModel() { IsPool = true, Name = "BRC2", SiteUser = "brconselhos", SitePass = "a123", ReleaseFilePath = @"C:\Users\leo_l\OneDrive\Área de Trabalho\release_mainimpl.xml" });
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogInformation("Error at: {time}, {error}", DateTimeOffset.Now, ex);
+                        if (!string.IsNullOrEmpty(error))
+                        {
+                            Console.WriteLine(error);
+                            //_logger.LogInformation("Error at: {time}, {error}", DateTimeOffset.Now, error);
+                        }
+                        else if (request.HasUpdate)
+                        {
+                            Console.WriteLine("\n Executando operação");
+                            ServiceModelHandler.Updater(request);
+                            ExecuteOperation();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        IsTaskCompleted = true;
+
+                        _logger.LogInformation("Error at: {time}, {error}", DateTimeOffset.Now, ex);
+
+                        Console.WriteLine(ex);
+                    }
+
+                    Thread.Sleep(10000);
+                    IsTaskCompleted = true;
                 }
             }
         }
 
-        private void ExecuteOperation(MidModel.ServiceModel request)
+        private void ExecuteOperation()
         {
             APILog.Append($"Localizada atualização em: {DateTimeOffset.Now}");
-
-            InitUpdate(request);
-
             var logThreadCancellationToken = new CancellationTokenSource();
-            Thread logThread = new(() => LogListener(request.Id, logThreadCancellationToken.Token));
 
-            Thread updateThread = new(() => InitUpdate(request));
-            while (updateThread.IsAlive)
+            try
             {
-                Thread.Sleep(5000);
+                Console.WriteLine("\n Atualizando status");
 
-                if (!ResponseService.HasMessage())
-                {
-                    logThreadCancellationToken.Cancel();
-                }
+                APIHandler.SendStatusInformation(_configSettings, ServiceModelHandler._service.Id, (int)ScheduleProgress.Started);
+
+                InitUpdate();
+
+                //Thread logThread = new(() => LogListener(request.Id, logThreadCancellationToken.Token));
+
+                //Thread updateThread = new(() => InitUpdate(request));
+                //while (logThread.IsAlive)
+                //{
+                //    Thread.Sleep(5000);
+
+                //    if (!ResponseService.HasMessage())
+                //    {
+                //        logThreadCancellationToken.Cancel();
+                //    }
+                //}
+                APIHandler.SendStatusInformation(_configSettings, ServiceModelHandler._service.Id, (int)ScheduleProgress.Done);
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Ocorreu um erro " + ex.Message);
+                //logThreadCancellationToken.Cancel();
+                APIHandler.SendStatusInformation(_configSettings, ServiceModelHandler._service.Id, (int)ScheduleProgress.Error);
+                throw;
             }
         }
 
@@ -72,13 +108,33 @@ namespace UpdaterService
             }
         }
 
-        private void InitUpdate(MidModel.ServiceModel request)
+        private void InitUpdate()
         {
-            if (request.IsPool)
-                new PoolUpdateHandler(request, _configSettings).Init();
+            try
+            {
+                if (ServiceModelHandler._service.IsPool)
+                    new PoolUpdateHandler(_configSettings).Init();
+            }
+            catch (Exception ex)
+            {
+                ZipFile.ExtractToDirectory(ServiceModelHandler.BackupZipFile, ServiceModelHandler.SiteFolderPath, true);
+                _logger.LogError(ex, "Ocorreu um erro ao atualizar o backup dos arquivos foi executado");
+                Console.WriteLine("Ocorreu um erro ao atualizar o backup dos arquivos foi executado");
+                throw;
+            }
 
-            else if (request.IsService)
-                new ServiceUpdateHandler(request, _configSettings).Init();
+            try
+            {
+                if (ServiceModelHandler._service.IsService)
+                    new ServiceUpdateHandler(_configSettings).Init();
+            }
+            catch (Exception ex)
+            {
+                ZipFile.ExtractToDirectory(ServiceModelHandler.BackupZipFile, ServiceModelHandler.ServiceFolderPath, true);
+                _logger.LogError(ex, "Ocorreu um erro ao atualizar os serviços o backup dos arquivos foi executado");
+                Console.WriteLine("Ocorreu um erro ao atualizar o backup dos arquivos foi executado");
+                throw;
+            }
         }
     }
 }

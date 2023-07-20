@@ -1,25 +1,26 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace Updater.Migrations
 {
-    public partial class alteracoes : Migration
+    public partial class createduser : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "Locked",
+            migrationBuilder.AddColumn<DateTime>(
+                name: "Creation",
                 table: "User",
-                type: "bit",
+                type: "datetime2",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "Locked",
+                name: "Creation",
                 table: "User");
         }
     }

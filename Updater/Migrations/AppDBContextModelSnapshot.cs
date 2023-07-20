@@ -28,6 +28,13 @@ namespace Updater.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ClientName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("HasUpdate")
                         .HasColumnType("bit");
 
@@ -37,15 +44,21 @@ namespace Updater.Migrations
                     b.Property<bool>("IsService")
                         .HasColumnType("bit");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("PatchFilesPath")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ReleaseFilePath")
+                    b.Property<string>("PoolName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ScheduleProgress")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ScheduledDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ServiceName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -54,6 +67,16 @@ namespace Updater.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SiteUser")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid>("VersionFileId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("VersionName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -71,6 +94,9 @@ namespace Updater.Migrations
                     b.Property<string>("AppPoolName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("Creation")
+                        .HasColumnType("datetime2");
 
                     b.Property<bool>("Locked")
                         .HasColumnType("bit");
@@ -99,14 +125,35 @@ namespace Updater.Migrations
                     b.ToTable("Client");
                 });
 
+            modelBuilder.Entity("Updater.Models.ClientUser", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ClientUser");
+                });
+
             modelBuilder.Entity("Updater.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<Guid?>("ClientId")
-                        .HasColumnType("uniqueidentifier");
+                    b.Property<DateTime>("Creation")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Email")
                         .HasColumnType("nvarchar(max)");
@@ -127,8 +174,6 @@ namespace Updater.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ClientId");
 
                     b.ToTable("User");
                 });
@@ -183,13 +228,23 @@ namespace Updater.Migrations
                     b.ToTable("VersionFile");
                 });
 
-            modelBuilder.Entity("Updater.Models.User", b =>
+            modelBuilder.Entity("Updater.Models.ClientUser", b =>
                 {
                     b.HasOne("Updater.Models.Client", "Client")
                         .WithMany("Users")
-                        .HasForeignKey("ClientId");
+                        .HasForeignKey("ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Updater.Models.User", "User")
+                        .WithMany("Clients")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Client");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Updater.Models.VersionFile", b =>
@@ -206,6 +261,11 @@ namespace Updater.Migrations
             modelBuilder.Entity("Updater.Models.Client", b =>
                 {
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("Updater.Models.User", b =>
+                {
+                    b.Navigation("Clients");
                 });
 
             modelBuilder.Entity("Updater.Models.Version", b =>

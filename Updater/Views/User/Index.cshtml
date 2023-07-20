@@ -1,12 +1,18 @@
-﻿@{
-    ViewData["Title"] = "Index";
+﻿@using X.PagedList.Mvc;
+@using X.PagedList;
+@using X.PagedList.Mvc.Core;
+
+@{
+    ViewData["Title"] = "Usuários";
+    IPagedList<UserViewModel>? UserList = (ViewData["Users"] as IPagedList<UserViewModel>);
+
 }
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 
-<h1>Usuários</h1>
+<h4>Usuários</h4>
 
 <div>
-    @if (ViewData["Users"] != null)
+    @if (UserList != null)
     {
         int i = 1;
 
@@ -23,30 +29,21 @@
             </thead>
             <tbody>
 
-                @foreach (var client in (ViewData["Users"] as List<UserViewModel>))
+                @foreach (var user in UserList)
                 {
                     <tr>
                         <th scope="row">@i</th>
-                        <td>@client.Username</td>
-                        <td>@client.Role </td>
-                        <td>@client.Client?.Name </td>
-                        <td>@client.IsLocked()</td>
-                        <td><button class="btn btn-primary edit-version" data-id="@client.Id">Editar</button></td>
+                        <td>@user.Username</td>
+                        <td>@user.Role</td>
+                        <td>@user.Client?.Name </td>
+                        <td>@user.IsLocked()</td>
+                        <td><button class="btn btn-primary edit-version" data-id="@user.Id">Editar</button></td>
                     </tr>
                     i++;
                 }
             </tbody>
         </table>
-        <nav aria-label="Page navigation example">
-            <ul class="pagination">
-                <li class="page-item"><a class="page-link" href="#">Anterior</a></li>
-                <li class="page-item"><a class="page-link" href="#">1</a></li>
-                <li class="page-item"><a class="page-link" href="#">2</a></li>
-                <li class="page-item"><a class="page-link" href="#">3</a></li>
-                <li class="page-item"><a class="page-link" href="#">Próximo</a></li>
-            </ul>
-        </nav>
-
+        @Html.PagedListPager(UserList, page => Url.Action("Index", "User", new { Page = page }))
     }
 
     <div class="modal in" tabindex="-1" role="dialog" id="edit-version">
@@ -54,9 +51,9 @@
     </div>
 
     <script type="text/javascript">
-        $(document).ready(function() {
-            $('.edit-version').click(function() {
-                var url = "/User/EditUser";
+        $(document).ready(function () {
+            $('.edit-version').click(function () {
+                var url = '@Html.Raw(Updater.Helper.BaseURL.URL + "/User/EditUser")';
                 var id = $(this).attr('data-id') ?? "";
                 $('#edit-version-container').load(url + '/' + id);
 

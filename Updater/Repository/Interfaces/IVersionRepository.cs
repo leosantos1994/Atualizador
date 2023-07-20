@@ -1,13 +1,14 @@
 ﻿using System.Linq.Expressions;
-using Updater.Models;
 
 namespace Updater.Repository.Interfaces
 {
     public interface IVersionRepository
     {
         Models.Version Get(Guid Id);
-        void Insert(Models.Version model);
-        void Update(Models.Version model);
+        void Insert(Models.Version model, bool saveChanges = true);
+        void Delete(Models.Version model, bool saveChanges = true);
+        void Update(Models.Version model, bool saveChanges = true);
+        void SaveChanges();
         IEnumerable<Models.Version> GetAll();
         IEnumerable<Models.Version> GetAll(Expression<Func<Models.Version, bool>> predicate);
     }

@@ -8,5 +8,6 @@
         public string BakupFolder { get; set; } = "";
         public string ServiceWorkDir { get; set; } = "";
         public string InstallerExePath { get; set; } = "";
+        public string Clients { get; set; } = "";
     }
 }
