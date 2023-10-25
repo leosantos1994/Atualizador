@@ -1,15 +1,17 @@
-﻿using System.IO.Compression;
+﻿using Serilog;
+using System.IO.Compression;
+using UpdaterService.Interfaces;
 using UpdaterService.Model;
 
 namespace UpdaterService.Handler
 {
     public abstract class BaseUpdateHandler
     {
-        internal ConfigSettings config;
+        internal IConfigSettings config;
         static readonly string[] _extensoesRemover = new string[] { ".cs", ".pdb", ".csproj", ".config", ".XML", ".xml", ".resx", ".user", ".aspx.cs", ".aspx.designer.cs" };
         static readonly string[] _diretoriosExcluir = new string[] { "Bandeiras", "tmp", "Images", "img", "BackOffice", "DataSets" };
-      
-        public BaseUpdateHandler(ConfigSettings _config)
+
+        public BaseUpdateHandler(IConfigSettings _config)
         {
             config = _config;
         }
@@ -25,8 +27,8 @@ namespace UpdaterService.Handler
                 if (!Directory.Exists(config.BakupFolder))
                     Directory.CreateDirectory(config.BakupFolder);
 
-                ResponseService.Add($"Realizando backup da pasta em {pastaBkp} em: {DateTime.UtcNow}.");
-                Console.WriteLine($"Realizando backup da pasta em {pastaBkp} em: {DateTime.UtcNow}.");
+                APIResponseHandler.Add($"Realizando backup da pasta em {pastaBkp} em: {DateTime.UtcNow}.");
+                Log.Information($"Realizando backup da pasta em {pastaBkp} em: {DateTime.UtcNow}.");
 
                 CopyDirectoryBackUp(backupFrom, pastaBkp, true);
 
@@ -36,23 +38,23 @@ namespace UpdaterService.Handler
 
                 Directory.Delete(pastaBkp, true);
 
-                Console.WriteLine($"Backup realizado com sucesso na pasta {pastaBkp} em: {DateTime.UtcNow}.");
-                ResponseService.Add($"Backup realizado com sucesso na pasta {pastaBkp} em: {DateTime.UtcNow}.");
+                Log.Information($"Backup realizado com sucesso na pasta {pastaBkp} em: {DateTime.UtcNow}.");
+                APIResponseHandler.Add($"Backup realizado com sucesso na pasta {pastaBkp} em: {DateTime.UtcNow}.");
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Erro ao tentar criar backup em {pastaBkp} de {backupFrom} em: {DateTime.UtcNow}.  Detalhe: {e.Message}");
+                Log.Error($"Erro ao tentar criar backup em {pastaBkp} de {backupFrom} em: {DateTime.UtcNow}.  Detalhe: {e.Message}");
 
-                ResponseService.Add($"Erro ao tentar criar backup em {pastaBkp} de {backupFrom} em: {DateTime.UtcNow}.  Detalhe: {e.Message}");
+                APIResponseHandler.Add($"Erro ao tentar criar backup em {pastaBkp} de {backupFrom} em: {DateTime.UtcNow}.  Detalhe: {e.Message}");
             }
         }
 
         internal void Update(string siteFolder, string patchFolder)
         {
 
-            ResponseService.Add($"Iniciando atualização da pasta em {siteFolder} em: {DateTime.UtcNow}.");
+            APIResponseHandler.Add($"Iniciando atualização da pasta em {siteFolder} em: {DateTime.UtcNow}.");
 
-            ResponseService.Add($"Localizando e excluindo dll 'HBSisConselhos.dll' em: {DateTime.UtcNow}.");
+            APIResponseHandler.Add($"Localizando e excluindo dll 'HBSisConselhos.dll' em: {DateTime.UtcNow}.");
 
             string dllPath = Directory.GetFiles(siteFolder, "*.*", SearchOption.AllDirectories)
                                       .FirstOrDefault(x => x.Contains("HBSisConselhos.dll"));
@@ -60,23 +62,31 @@ namespace UpdaterService.Handler
             if (!string.IsNullOrEmpty(dllPath))
                 File.Delete(dllPath);
 
-            ResponseService.Add($"Atualizando dll's em: {DateTime.UtcNow}.");
+            APIResponseHandler.Add($"Atualizando dll's em: {DateTime.UtcNow}.");
 
             ZipFile.ExtractToDirectory(patchFolder, siteFolder, true);
 
-            ResponseService.Add($"Atualização da pasta concluída em: {DateTime.UtcNow}.");
+            APIResponseHandler.Add($"Atualização da pasta concluída em: {DateTime.UtcNow}.");
         }
 
-        internal void UpdateService(string siteFolder, string patchFolder)
+        internal void UpdateService(string patchFolder, string binFolder)
         {
 
-            ResponseService.Add($"Iniciando atualização da pasta em {siteFolder} em: {DateTime.UtcNow}.");
+            APIResponseHandler.Add($"Iniciando atualização da pasta em {binFolder} em: {DateTime.UtcNow}.");
 
-            ResponseService.Add($"Atualizando dll's em: {DateTime.UtcNow}.");
+            APIResponseHandler.Add($"Atualizando dll's em: {DateTime.UtcNow}.");
 
-            CopyAll(siteFolder, patchFolder);
+            Log.Information($"Iniciando atualização da pasta em {binFolder} em: {DateTime.UtcNow}.");
 
-            ResponseService.Add($"Atualização da pasta concluída em: {DateTime.UtcNow}.");
+            string destinationZip = Path.Combine(patchFolder, "bin-Files.zip");
+
+            ZipFile.CreateFromDirectory(binFolder, destinationZip);
+
+            Log.Information($"Extraindo dados");
+
+            ZipFile.ExtractToDirectory(destinationZip, binFolder,true);
+
+            APIResponseHandler.Add($"Atualização da pasta concluída em: {DateTime.UtcNow}.");
         }
 
         private static void CopyAll(string siteFolder, string patchFolder)
@@ -85,6 +95,7 @@ namespace UpdaterService.Handler
 
             foreach (FileInfo fi in sourcePath.GetFiles())
             {
+                Log.Information($"Tentando copiar arquivo " + Path.Combine(siteFolder, fi.Name));
                 fi.CopyTo(Path.Combine(siteFolder, fi.Name), true);
             }
 

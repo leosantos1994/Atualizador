@@ -1,9 +1,9 @@
-﻿using UpdaterService.Handler;
+﻿using UpdaterService.Interfaces;
 using UpdaterService.Model;
 
-namespace UpdaterService
+namespace UpdaterService.Handler
 {
-    public static class ResponseService
+    public static class APIResponseHandler
     {
         private static List<string> _log = new List<string>();
         static object _lock = new object();
@@ -36,7 +36,7 @@ namespace UpdaterService
 
         }
 
-        public static void SendResponse(Guid serviceId, ConfigSettings config)
+        public static void SendResponse(Guid serviceId, IConfigSettings config)
         {
             lock (_lock)
             {

@@ -24,7 +24,7 @@ namespace Updater.Repository
 
         public string GetFileName(Guid versionId)
         {
-            return _contextDB.VersionFile.Where(x => x.VersionId == versionId).Select(x => new VersionFile() { FileName = x.FileName, VersionId = x.Id }).FirstOrDefault().FileName;
+            return _contextDB.VersionFile.Where(x => x.VersionId == versionId)?.Select(x => new VersionFile() { FileName = x.FileName, VersionId = x.Id })?.FirstOrDefault()?.FileName;
         }
 
         public Guid GetIdByVersion(Guid versionId)

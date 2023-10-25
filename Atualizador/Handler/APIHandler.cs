@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using System.Net.Http.Json;
+using UpdaterService.Interfaces;
 using UpdaterService.Model;
 
 namespace UpdaterService.Handler
@@ -8,7 +9,7 @@ namespace UpdaterService.Handler
     public class APIHandler
     {
         public static HttpClient? _Client;
-        private static void InitClient(ConfigSettings config)
+        private static void InitClient(IConfigSettings config)
         {
             if (_Client == null)
             {
@@ -17,7 +18,7 @@ namespace UpdaterService.Handler
             }
         }
 
-        public static MidModel.ServiceModel FindUpdateRequest(ConfigSettings config, out string errors)
+        public static MidModel.ServiceModel FindUpdateRequest(IConfigSettings config, out string errors)
         {
             errors = "";
 
@@ -26,7 +27,7 @@ namespace UpdaterService.Handler
 
             if (responseMessage.StatusCode == System.Net.HttpStatusCode.NoContent)
             {
-                errors = "Nenhum conteudo localizado para atualização.";
+                errors = "Nenhum conteúdo localizado para atualização.";
             }
             else if (responseMessage.StatusCode == System.Net.HttpStatusCode.InternalServerError)
             {
@@ -53,7 +54,7 @@ namespace UpdaterService.Handler
             return responseContent;
         }
 
-        public static FileContentResult DownloadFiles(ConfigSettings config, MidModel.ServiceModel responseModel, out string error)
+        public static FileContentResult DownloadFiles(IConfigSettings config, MidModel.ServiceModel responseModel, out string error)
         {
             HttpResponseMessage response = null;
             try
@@ -75,14 +76,16 @@ namespace UpdaterService.Handler
             return null;
         }
 
-        private static bool CreateFile(ConfigSettings cfg, MidModel.ServiceModel reponseService, Stream file, out string error)
+        private static bool CreateFile(IConfigSettings cfg, MidModel.ServiceModel reponseService, Stream file, out string error)
         {
             try
             {
                 string servicePath = Path.Combine(cfg.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName);
-                error = "";
 
-                ClearServiceWorkDirectory(servicePath);
+                if (!Directory.Exists(servicePath))
+                    new DirectoryInfo(servicePath).Create();
+
+                error = "";
 
                 string filePath = Path.Combine(servicePath, Constants.Constants.FileName);
 
@@ -103,22 +106,8 @@ namespace UpdaterService.Handler
             }
         }
 
-        private static void ClearServiceWorkDirectory(string dir)
-        {
-            ResponseService.Add($"Limpando diretório de serviço {dir}");
 
-            if (!Directory.Exists(dir))
-                Directory.CreateDirectory(dir);
-            else
-            {
-                foreach (var item in Directory.EnumerateFiles(dir))
-                {
-                    File.Delete(item);
-                }
-            }
-        }
-
-        public static MidModel.ServiceModel SendUpdateInformation(ResponseModel response, ConfigSettings config)
+        public static MidModel.ServiceModel SendUpdateInformation(ResponseModel response, IConfigSettings config)
         {
             try
             {
@@ -132,7 +121,7 @@ namespace UpdaterService.Handler
             }
         }
 
-        public static void SendStatusInformation(ConfigSettings config, Guid serviceId, int progress)
+        public static void SendStatusInformation(IConfigSettings config, Guid serviceId, int progress)
         {
             try
             {

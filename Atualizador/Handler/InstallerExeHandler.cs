@@ -41,12 +41,10 @@ namespace UpdaterService.Handler
 
                 process.Start();
 
+                process.WaitForExit();
 
-                
                 commandResult.Append(process.StandardOutput.ReadToEnd());
                 commandErrors.Append(process.StandardError.ReadToEnd());
-
-                process.WaitForExit();
 
                 process.Close();
             }

@@ -1,6 +1,8 @@
 ﻿using Microsoft.Web.Administration;
+using Serilog;
 using System.Text.Json;
 using System.Xml.Serialization;
+using UpdaterService.Interfaces;
 using UpdaterService.Model;
 using Application = Microsoft.Web.Administration.Application;
 using File = System.IO.File;
@@ -9,115 +11,55 @@ namespace UpdaterService.Handler
 {
     public class PoolUpdateHandler : BaseUpdateHandler
     {
-        public PoolUpdateHandler(ConfigSettings config) : base(config)
-        {
-        }
-
-        //private bool IsValid(out PoolConfigModel poolConfig)
-        //{
-        //    poolConfig = new PoolConfigModel();
-        //    bool https = false;
-        //    try
-        //    {
-        //        if (string.IsNullOrEmpty(_Service.PoolName))
-        //            throw new Exception("Nome do site/pool não informado.");
-
-        //        ResponseService.Add($"Iniciando validações do site. {_Service.PoolName} em: {DateTime.UtcNow}");
-
-        //        var serverManager = new ServerManager();
-        //        if (serverManager.Sites.Any(x => x.Name.ToLower().Equals(_Service.PoolName.ToLower())))
-        //        {
-        //            var site = serverManager.Sites.First(x => x.Name.ToLower().Equals(_Service.PoolName.ToLower()));
-        //            https = site.Bindings.Any(x => x["Protocol"] as string == "https");
-
-        //            if (https)
-        //                poolConfig.URL = site.Bindings.First(x => x["Protocol"] as string == "https").BindingInformation;
-        //            else
-        //                poolConfig.URL = site.Bindings.First(x => x["Protocol"] as string == "http").BindingInformation;
-
-        //            poolConfig.URL = poolConfig.URL.Substring(poolConfig.URL.LastIndexOf(":") + 1);
-
-        //            var app = site.Applications.First();
-        //            poolConfig.PoolName = app.ApplicationPoolName;
-        //            poolConfig.RootPath = app.VirtualDirectories.First().PhysicalPath;
-        //            return true;
-        //        }
-        //        else
-        //        {
-        //            foreach (var site in serverManager.Sites)
-        //            {
-        //                if (site.Applications.Any(x => x.Path.ToLower().EndsWith(_Service.PoolName.ToLower())))
-        //                {
-        //                    var app = site.Applications.First(x => x.Path.ToLower().EndsWith(_Service.PoolName.ToLower()));
-
-        //                    if (https)
-        //                        poolConfig.URL = site.Bindings.First(x => x["Protocol"] as string == "https").BindingInformation + "/" + _Service.PoolName;
-        //                    else
-        //                        poolConfig.URL = site.Bindings.First(x => x["Protocol"] as string == "http").BindingInformation + "/" + _Service.PoolName;
-
-        //                    poolConfig.PoolName = app.ApplicationPoolName;
-        //                    poolConfig.RootPath = app.VirtualDirectories.First().PhysicalPath;
-        //                    return true;
-
-        //                }
-        //            }
-        //        }
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        ResponseService.Add($"Falha ao localizar site. {_Service.PoolName} em: {DateTime.UtcNow} Detalhe: {JsonSerializer.Serialize(e)}");
-        //    }
-        //    return false;
-        //}
-
+        public PoolUpdateHandler(IConfigSettings config) : base(config) { }
         private bool LoadSiteConfiguration(out PoolConfigModel poolConfig)
         {
             string PoolName = ServiceModelHandler._service.PoolName;
 
             if (string.IsNullOrEmpty(PoolName))
+            {
+                Log.Error("Pool do site não informado.");
                 throw new Exception("Pool do site não informado.");
+            }
 
-            ResponseService.Add($"Iniciando validações do site. {PoolName} em: {DateTime.UtcNow}");
+            APIResponseHandler.Add($"Iniciando validações do site. {PoolName} em: {DateTime.UtcNow}");
 
             Site site = null;
             string url = "";
             Microsoft.Web.Administration.Application? application = null;
 
-            Console.WriteLine("finding site");
-
             site = FindIISSite(PoolName);
-            Console.WriteLine("finding site result" + site != null);
 
             if (site != null)
             {
                 application = site.Applications.First();
 
-                Console.WriteLine("finding app by site " + application != null);
-
-
                 url = GetIISApplicationUrl(site);
             }
             else
             {
-                Console.WriteLine("finding app and site");
-
                 (site, application) = FindIISApp(PoolName);
 
-                Console.WriteLine("finding app and site " + site != null && application != null);
-
                 if (site is null || application is null)
+                {
+                    Log.Error("Site não localizado.");
                     throw new Exception("Site não localizado");
+                }
 
 
                 url = GetIISApplicationUrl(site, application);
             }
 
             if (application is null)
+            {
+                Log.Error("Site não localizado.");
                 throw new Exception("Site não localizado");
+            }
 
-            Console.WriteLine(" Pool name " + PoolName);
-            Console.WriteLine(" Pool directory " + application.VirtualDirectories.FirstOrDefault().PhysicalPath);
-            Console.WriteLine(" Pool url " + url);
+
+            Log.Information(" Pool name " + PoolName);
+            Log.Information(" Pool directory " + application.VirtualDirectories.FirstOrDefault().PhysicalPath);
+            Log.Information(" Pool url " + url);
             poolConfig = new()
             {
                 PoolName = PoolName,
@@ -191,9 +133,9 @@ namespace UpdaterService.Handler
             return url;
         }
 
-        private void Pool(string poolName, bool start = true, bool recycle = false)
+        public void Pool(string poolName, bool start = true, bool recycle = false)
         {
-            ResponseService.Add($"Procurando pool de aplicativos. {ServiceModelHandler._service.PoolName}");
+            APIResponseHandler.Add($"Procurando pool de aplicativos. {ServiceModelHandler._service.PoolName}");
 
             var serverManager = new ServerManager();
             serverManager.ApplicationPools.FirstOrDefault(ap => ap.Name.ToLower().Equals(poolName.ToLower()));
@@ -201,36 +143,47 @@ namespace UpdaterService.Handler
 
             if (recycle)
             {
-                ResponseService.Add($"Reciclando pool de aplicativos. {ServiceModelHandler._service.PoolName}");
+                APIResponseHandler.Add($"Reciclando pool de aplicativos. {ServiceModelHandler._service.PoolName}");
                 if (appPool?.State == ObjectState.Started)
                     appPool?.Recycle();
-                ResponseService.Add($"Pool de aplicativos reciclando. {ServiceModelHandler._service.PoolName}");
+                APIResponseHandler.Add($"Pool de aplicativos reciclando. {ServiceModelHandler._service.PoolName}");
             }
             else if (start)
             {
-                ResponseService.Add($"Iniciando pool de aplicativos. {ServiceModelHandler._service.PoolName}");
+                APIResponseHandler.Add($"Iniciando pool de aplicativos. {ServiceModelHandler._service.PoolName}");
                 if (appPool?.State != ObjectState.Started)
                     appPool?.Start();
-                ResponseService.Add($"Pool de aplicativos iniciado. {ServiceModelHandler._service.PoolName}");
+                APIResponseHandler.Add($"Pool de aplicativos iniciado. {ServiceModelHandler._service.PoolName}");
             }
             else
             {
-                ResponseService.Add($"Parando pool de aplicativos. {ServiceModelHandler._service.PoolName}");
+                APIResponseHandler.Add($"Parando pool de aplicativos. {ServiceModelHandler._service.PoolName}");
                 if (appPool?.State == ObjectState.Started)
                     appPool?.Stop();
-                ResponseService.Add($"Pool de aplicativos parado. {ServiceModelHandler._service.PoolName}");
+                APIResponseHandler.Add($"Pool de aplicativos parado. {ServiceModelHandler._service.PoolName}");
             }
         }
 
-        private void ReleaseUpdate(string installerFullPath, string configPath)
+        private bool ReleaseUpdate(string installerFullPath, string configPath)
         {
             var exec = new InstallerExeHandler(installerFullPath, new string[] { configPath });
 
             if (string.IsNullOrEmpty(exec.CommandErrors))
-                ResponseService.Add($"Release de base atualizado com sucesso.");
+            {
+                APIResponseHandler.Add($"Release de base atualizado com sucesso.");
+                Log.Information("Release de base atualizado com sucesso.");
+                Log.Information($"Release de base atualizado com sucesso.");
+                return true;
+            }
 
             else if (!string.IsNullOrEmpty(exec.CommandErrors))
-                ResponseService.Add($"Release de base não atualizado com sucesso, verifique os dados ou tente atualizar manualmente. {exec.CommandErrors}");
+            {
+                APIResponseHandler.Add($"Release de base não atualizado com sucesso, verifique os dados ou tente atualizar manualmente. {exec.CommandErrors}");
+                Log.Information($"Release de base não atualizado com sucesso, verifique os dados ou tente atualizar manualmente. {exec.CommandErrors}");
+                Log.Error($"Release de base não atualizado com sucesso, verifique os dados ou tente atualizar manualmente. {exec.CommandErrors}");
+                return false;
+            }
+            return false;
         }
 
 
@@ -252,64 +205,70 @@ namespace UpdaterService.Handler
 
         public void Init()
         {
-            Console.WriteLine("\n Procurando configurações de IIS");
+            Log.Information("\n Procurando configurações de IIS");
+            Log.Information("\n Procurando configurações de IIS");
 
             bool isValid = LoadSiteConfiguration(out PoolConfigModel poolConfig);
 
             if (!isValid)
             {
-                Console.WriteLine("\n Configurações para atualização inválidas");
-
-                ResponseService.Add($"Configurações para atualização inválidas. {ServiceModelHandler._service.PoolName}"); return;
+                Log.Information("\n Configurações para atualização inválidas");
+                Log.Error($"Configurações para atualização inválidas. {ServiceModelHandler._service.PoolName}");
+                APIResponseHandler.Add($"Configurações para atualização inválidas. {ServiceModelHandler._service.PoolName}"); return;
             }
 
-            Console.WriteLine("\n Parando pool");
+            Log.Information("\n Parando pool");
 
             Pool(poolConfig.PoolName, start: false);
 
-            Console.WriteLine("\n Fazendo Backup");
+            Log.Information("\n Fazendo Backup");
 
             Backup(ServiceModelHandler._service.PoolName, poolConfig.RootPath);
 
-            Console.WriteLine("\n Atualizando");
+            Log.Information("\n Atualizando");
 
             Update(poolConfig.RootPath, ServiceModelHandler._service.PatchFilesPath);
 
             ServiceModelHandler.SiteFolderPath = poolConfig.RootPath;
 
-            Console.WriteLine("\n Reiniciando pool");
+            Log.Information("\n Reiniciando pool");
 
             Pool(poolConfig.PoolName, start: true);
 
-            ResponseService.Add($"Procurando Release. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
+            APIResponseHandler.Add($"Procurando Release. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
 
-            Console.WriteLine($"\n Procurando Release {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
+            Log.Information($"\n Procurando Release {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
 
             if (File.Exists(ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)))
             {
-                ResponseService.Add($"Release Localizado. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
+                APIResponseHandler.Add($"Release Localizado. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
 
                 string configPath = CreateConfig(poolConfig.URL, ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath));
 
-                Console.WriteLine("\n Aplicando atualização de base de dados (Release)");
+                Log.Information("\n Aplicando atualização de base de dados (Release)");
 
-                ReleaseUpdate(config.InstallerExePath, configPath);
+                bool dbUpdateSucess = ReleaseUpdate(config.InstallerExePath, configPath);
 
                 File.Delete(ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath));
 
-                Console.WriteLine("\n Reiniciando pool");
+                if (!dbUpdateSucess)
+                    throw new Exception("Erro ao atualizar banco de dados, verifique o log");
+
+                Log.Information("\n Reiniciando pool");
 
                 Pool(poolConfig.PoolName, start: false, recycle: true);
             }
             else
             {
-                ResponseService.Add($"Release Não Localizado. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
-                Console.WriteLine($"\n Release Não Localizado");
+                APIResponseHandler.Add($"Release Não Localizado. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
+                Log.Information($"Release Não Localizado. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
+                Log.Information($"\n Release Não Localizado");
             }
 
-            Console.WriteLine("\n Ambiente atualizado");
+            Log.Information("\n Ambiente atualizado");
 
-            ResponseService.Add($"Ambiente atualizado. {ServiceModelHandler._service.PoolName}", complete: true);
+            APIResponseHandler.Add($"Ambiente atualizado. {ServiceModelHandler._service.PoolName}", complete: true);
+            Log.Information($"Ambiente atualizado. {ServiceModelHandler._service.PoolName}");
         }
     }
 }

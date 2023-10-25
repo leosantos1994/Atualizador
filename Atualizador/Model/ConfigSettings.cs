@@ -1,9 +1,10 @@
-﻿namespace UpdaterService.Model
+﻿using UpdaterService.Interfaces;
+
+namespace UpdaterService.Model
 {
-    public class ConfigSettings
+    public class ConfigSettings : IConfigSettings
     {
         public const string Config = "Config";
-        public string Client { get; set; } = "";
         public string ApiURL { get; set; } = "";
         public string BakupFolder { get; set; } = "";
         public string ServiceWorkDir { get; set; } = "";

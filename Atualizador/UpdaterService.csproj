@@ -5,11 +5,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-WorkerService1-789514C7-F680-44F3-9B5E-ACDD81210C73</UserSecretsId>
-    <ApplicationIcon>Martin-Berube-Character-Robot (1).ico</ApplicationIcon>
+    <ApplicationIcon>Resources\Martin-Berube-Character-Robot (1).ico</ApplicationIcon>
     <AssemblyName>$(MSBuildProjectName)</AssemblyName>
     <Company>LS Soluções</Company>
     <Copyright>LS Soluções</Copyright>
     <ProduceReferenceAssembly>True</ProduceReferenceAssembly>
+    <Product>Atualizador de Sistemas</Product>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -25,13 +26,20 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Martin-Berube-Character-Robot (1).ico" />
+    <Content Include="Resources\Martin-Berube-Character-Robot (1).ico" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="6.0.10" />
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="6.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="7.0.1" />
     <PackageReference Include="Microsoft.Web.Administration" Version="11.1.0" />
+    <PackageReference Include="Serilog.AspNetCore" Version="7.0.1-dev-00320" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="7.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="4.1.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="5.0.1-dev-00947" />
+    <PackageReference Include="Serilog.Sinks.Map" Version="1.0.2" />
     <PackageReference Include="System.Management" Version="6.0.0" />
   </ItemGroup>
 
@@ -52,5 +60,9 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Log\" />
   </ItemGroup>
 </Project>
