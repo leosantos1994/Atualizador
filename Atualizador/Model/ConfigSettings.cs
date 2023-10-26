@@ -10,5 +10,6 @@ namespace UpdaterService.Model
         public string ServiceWorkDir { get; set; } = "";
         public string InstallerExePath { get; set; } = "";
         public string Clients { get; set; } = "";
+        public string AplicationPath { get; set; } = "";
     }
 }

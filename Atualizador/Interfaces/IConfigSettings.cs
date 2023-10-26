@@ -7,5 +7,6 @@
         string Clients { get; set; }
         string InstallerExePath { get; set; }
         string ServiceWorkDir { get; set; }
+        string AplicationPath { get; set; }
     }
 }
