@@ -1,6 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Net.Mime;
+using System.Text;
 using UpdaterService.Interfaces;
 using UpdaterService.Model;
 
@@ -23,7 +27,13 @@ namespace UpdaterService.Handler
             errors = "";
 
             InitClient(config);
-            HttpResponseMessage responseMessage = _Client.GetAsync($"{config.ApiURL}/update/GetService/{config.Clients}").Result;
+            HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"{config.ApiURL}/update/GetService/");
+            request.Headers.Add("Connection", "keep-alive");
+            request.Headers.Add("Accept", "*/*");
+            string content = System.Text.Json.JsonSerializer.Serialize(config.Clients);
+            request.Content = new StringContent(content, Encoding.UTF8, "application/json");
+
+            HttpResponseMessage responseMessage = _Client.SendAsync(request).Result;
 
             if (responseMessage.StatusCode == System.Net.HttpStatusCode.NoContent)
             {

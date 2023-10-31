@@ -81,11 +81,16 @@
                                 }
                                 else if (Model.Users != null)
                                 {
+                                    if (Model.CurrentUser != null)
+                                    {
+                                        <option selected="selected" value="@Model.CurrentUser.Id">@Model.CurrentUser.Username</option>
+                                    }
+
                                     @foreach (var item in Model.Users)
                                     {
-                                        @if (item != null)
+                                        @if (item != null && item != Model.CurrentUser)
                                         {
-                                            <option selected="selected" value="@item.Id">@item.Username</option>
+                                            <option value="@item.Id">@item.Username</option>
                                         }
                                     }
                                 }

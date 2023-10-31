@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using MessagePack;
+using Microsoft.AspNetCore.Mvc;
 using Updater.Models;
 using Updater.Repository;
 using Updater.Repository.Interfaces;
@@ -25,7 +26,7 @@ namespace Updater.Controllers
         [ValidateLoggedUserAdm]
         public ActionResult Index(string? error, int page = 1)
         {
-            ViewData["Clients"] = GetViewModel().ToList().OrderByDescending(x=> x.Creation).ToPagedList(page, 10);
+            ViewData["Clients"] = GetViewModel().ToList().OrderByDescending(x => x.Creation).ToPagedList(page, 10);
             ViewData["MSG"] = error;
             return View();
         }
@@ -41,7 +42,16 @@ namespace Updater.Controllers
             {
                 var client = new Models.Client().GetClientViewModel(_ClientRepository.Get(id));
 
-                client.Users = _ClientUserRepository.GetAll(x => x.ClientId == client.Id).Select(x => x.User).ToList();
+
+                var allUsers = new List<User>();
+
+                allUsers.AddRange(_ClientUserRepository.GetAll(x => x.ClientId == client.Id).Select(x => x.User).ToList());
+
+                client.CurrentUser = allUsers.FirstOrDefault(defaultValue: null);
+
+                allUsers.AddRange(_UserRepository.GetAll(user => !_ClientUserRepository.GetAll().Select(x => x.UserId).Contains(user.Id) && user.Role == Constants.Role_Client).ToList());
+
+                client.Users = allUsers;
 
                 return base.PartialView("_EditClientPartial", client);
             }
@@ -88,19 +98,25 @@ namespace Updater.Controllers
                     }
                     else
                     {
-                        var dbUser = _ClientUserRepository.GetAll(x => x.Client.Id == clientModel.Id).FirstOrDefault();
-                        if (dbUser != null)
-                        {
-                            dbUser.ClientId = Guid.Empty;
-                            _ClientUserRepository.Update(dbUser, false);
-                        }
+                        ClientUser? dbUser = GetClientUser(clientModel);
 
-                        UpdateSelectedUser(clientModel.Id, userId);
+                        if (userId != dbUser?.UserId)
+                        {
+                            if (dbUser is not null)
+                            {
+                                _ClientUserRepository.Delete(dbUser, true);
+                                dbUser = null;
+                            }
+
+                            UpdateSelectedUser(clientModel.Id, userId);
+                        }
 
                         _ClientRepository.Update(clientModel);
 
-
                         _ClientRepository.SaveChanges();
+
+                        if (dbUser is null)
+                            dbUser = GetClientUser(clientModel);
 
                         clientModel.Users = new List<ClientUser>() { dbUser };
 
@@ -120,6 +136,11 @@ namespace Updater.Controllers
             return PartialView("_EditClientPartial", new Client().GetClientViewModel(_ClientRepository.Get(clientModel.Id)));
         }
 
+        private ClientUser? GetClientUser(Client clientModel)
+        {
+            return _ClientUserRepository.GetAll(x => x.Client.Id == clientModel.Id).FirstOrDefault();
+        }
+
         [HttpGet]
         [ValidateLoggedUser]
         [ValidateLoggedUserAdm]
@@ -130,8 +151,8 @@ namespace Updater.Controllers
             try
             {
                 var client = _ClientRepository.Get(itemId);
-                if(client is null)
-                return RedirectToAction("Index", new { error = "Cliente não localizado." });
+                if (client is null)
+                    return RedirectToAction("Index", new { error = "Cliente não localizado." });
 
 
                 var clientUser = _ClientUserRepository.GetByClient(client.Id);
@@ -157,7 +178,7 @@ namespace Updater.Controllers
         {
             if (userId != Guid.Empty)
             {
-                _ClientUserRepository.Insert(new() { ClientId = clienId, UserId = userId }, false);
+                _ClientUserRepository.Insert(new() { ClientId = clienId, UserId = userId }, true);
             }
         }
 

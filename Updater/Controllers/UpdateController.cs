@@ -20,8 +20,8 @@ namespace Updater.Controllers
             this._ServiceRepository = new ServiceRepository(context);
         }
 
-        [HttpGet("GetService/{client}")]
-        public async Task<ActionResult> Get(string client)
+        [HttpGet("GetService")]
+        public async Task<ActionResult> Get([FromBody] string client)
         {
             try
             {
@@ -30,7 +30,6 @@ namespace Updater.Controllers
                 foreach (var clientName in clients)
                 {
                     service = _ServiceRepository.Get(x => x.ClientName.ToLower() == clientName.ToLower() && x.ScheduleProgress == ScheduleProgress.Waiting && x.ScheduledDate <= DateTime.Now);
-
                     if (service != null)
                         break;
                 }

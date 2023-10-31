@@ -25,6 +25,7 @@ namespace Updater.Models
         [Display(Name = "Nome do serviço")]
         public string ServiceName { get; set; }
         public DateTime Creation { get; set; }
+        public User CurrentUser { get; set; }
 
         public IEnumerable<User> Users { get; set; }
 
@@ -41,6 +42,7 @@ namespace Updater.Models
                 ServiceName = clientmodel.ServiceName,
                 AppPoolName = clientmodel.AppPoolName,
                 Creation = clientmodel.Creation,
+                CurrentUser = clientmodel.Users.FirstOrDefault(defaultValue: null)?.User,
                 Users = clientmodel.Users.Select(x=> x.User).ToList()
             };
         }
