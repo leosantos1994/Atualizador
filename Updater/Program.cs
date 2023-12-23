@@ -59,7 +59,6 @@ string baseSiteURL = builder.Configuration.GetValue<string>("BaseURL");
 BaseURL.URL = baseSiteURL;
 
 var app = builder.Build();
-app.UseDeveloperExceptionPage();
 
 if (https)
 {

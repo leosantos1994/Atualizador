@@ -61,10 +61,7 @@ namespace UpdaterService
             }
             catch (Exception ex)
             {
-                Log.Information("Error at: {time}, {error}", DateTimeOffset.Now, ex);
-
-                Log.Error("Ocorreu um erro", ex);
-                Log.Information("Ocorreu um erro " + ex.Message);
+                Log.Error("Error at: {time}, {error}", DateTimeOffset.Now, ex);
                 //logThreadCancellationToken.Cancel();
                 APIHandler.SendStatusInformation(_configSettings, ServiceModelHandler._service.Id, (int)ScheduleProgress.Error);
                 throw;
@@ -89,10 +86,9 @@ namespace UpdaterService
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Ocorreu um erro ao atualizar o backup dos arquivos foi iniciado");
+                Log.Error(ex, "Ocorreu um erro ao atualizar, backup dos arquivos foi iniciado");
                 ZipFile.ExtractToDirectory(ServiceModelHandler.BackupZipFile, ServiceModelHandler.SiteFolderPath, true);
-                Log.Error(ex, "Ocorreu um erro ao atualizar o backup dos arquivos foi executado");
-                Log.Information("Ocorreu um erro ao atualizar o backup dos arquivos foi executado");
+           
                 new PoolUpdateHandler(_configSettings).Pool(ServiceModelHandler._service.PoolName, true);
                 throw;
             }
@@ -104,15 +100,14 @@ namespace UpdaterService
             }
             catch (Exception ex)
             {
-                Log.Error(ex, "Ocorreu um erro ao atualizar os serviços o backup dos arquivos foi iniciado");
+                Log.Error(ex, "Ocorreu um erro ao atualizar os serviços, backup dos arquivos foi iniciado");
                 ZipFile.ExtractToDirectory(ServiceModelHandler.BackupZipFile, ServiceModelHandler.ServiceFolderPath, true);
-                Log.Error(ex, "Ocorreu um erro ao atualizar os serviços o backup dos arquivos foi executado");
-                Log.Information("Ocorreu um erro ao atualizar o backup dos arquivos foi executado");
+       
                 new ServiceUpdateHandler(_configSettings).Service(ServiceModelHandler._service.ServiceName, true);
                 throw;
             }
-            Log.Error("Limpando diretório de serviço");
 
+            Log.Information("Limpando diretório de serviço");
             string servicePath = Path.Combine(_configSettings.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName);
 
             foreach (var directory in Directory.EnumerateDirectories(servicePath))
@@ -120,7 +115,7 @@ namespace UpdaterService
                 Directory.Delete(directory, true);
             }
 
-            Log.Error("Diretório de serviço foi limpo");
+            Log.Information("Diretório de serviço foi limpo");
         }
     }
 }

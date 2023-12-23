@@ -10,6 +10,7 @@ namespace Updater.Models
         [Display(Name = "Data do agendamento")]
         [Required(ErrorMessage = "Data do agendamento é obrigatória")]
         public DateTime ScheduledDate { get; set; }
+        public DateTime CreationDate { get; set; }
         public List<Version> Versions { get; set; }
         public List<Client> Clients { get; set; }
 
@@ -20,7 +21,8 @@ namespace Updater.Models
                 Id = updateModel.Id,
                 IsPool = updateModel.IsPool,
                 IsService = updateModel.IsService,
-                ScheduledDate = updateModel.ScheduledDate
+                ScheduledDate = updateModel.ScheduledDate,
+                CreationDate = updateModel.ScheduledDate
             };
         }
     }

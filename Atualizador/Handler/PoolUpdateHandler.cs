@@ -1,5 +1,7 @@
-﻿using Microsoft.Web.Administration;
+﻿using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.Web.Administration;
 using Serilog;
+using System.IO.Compression;
 using System.Text.Json;
 using System.Xml.Serialization;
 using UpdaterService.Interfaces;
@@ -18,7 +20,6 @@ namespace UpdaterService.Handler
 
             if (string.IsNullOrEmpty(PoolName))
             {
-                Log.Error("Pool do site não informado.");
                 throw new Exception("Pool do site não informado.");
             }
 
@@ -42,7 +43,6 @@ namespace UpdaterService.Handler
 
                 if (site is null || application is null)
                 {
-                    Log.Error("Site não localizado.");
                     throw new Exception("Site não localizado");
                 }
 
@@ -52,7 +52,6 @@ namespace UpdaterService.Handler
 
             if (application is null)
             {
-                Log.Error("Site não localizado.");
                 throw new Exception("Site não localizado");
             }
 
@@ -101,18 +100,38 @@ namespace UpdaterService.Handler
             return site;
         }
 
-        private string GetIISApplicationUrl(Site site, Microsoft.Web.Administration.Application application)
+        private string GetIISApplicationUrl(Site site, Application application)
         {
             string url = "";
-            bool isHTTPS = site.Bindings.Any(x => x["Protocol"] as string == "https");
+            bool isHTTPS = false;
 
-            if (isHTTPS)
-                url = site.Bindings.First(x => x["Protocol"] as string == "https").BindingInformation + application.Path;
+            if (application != null)
+            {
+                isHTTPS = application.EnabledProtocols.Contains("https") || site.Bindings.Any(x => x["Protocol"] as string == "https");
+
+                if (isHTTPS)
+                {
+                    url = site.Bindings.First(x => x["Protocol"] as string == "https").BindingInformation + application.Path;
+                    url = (isHTTPS ? "https://" : "http://") + url.Substring(url.LastIndexOf(":") + 1);
+                    return url;
+                }
+                else
+                    url = site.Bindings.First(x => x["Protocol"] as string == "http").BindingInformation + application.Path;
+
+                string newUrl = (isHTTPS ? "https://" : "http://") + (url.Contains("*:80:") ? url.Replace("*:80:", "localhost") : "");
+
+                url = newUrl;
+            }
             else
-                url = site.Bindings.First(x => x["Protocol"] as string == "http").BindingInformation + application.Path;
+            {
+                isHTTPS = site.Bindings.Any(x => x["Protocol"] as string == "https");
+                if (isHTTPS)
+                    url = site.Bindings.First(x => x["Protocol"] as string == "https").BindingInformation + application.Path;
+                else
+                    url = site.Bindings.First(x => x["Protocol"] as string == "http").BindingInformation + application.Path;
 
-
-            url = (isHTTPS ? "https://" : "http://") + url.Substring(url.LastIndexOf(":") + 1);
+                url = (isHTTPS ? "https://" : "http://") + url.Substring(url.LastIndexOf(":") + 1);
+            }
 
             return url;
         }
@@ -172,14 +191,11 @@ namespace UpdaterService.Handler
             {
                 APIResponseHandler.Add($"Release de base atualizado com sucesso.");
                 Log.Information("Release de base atualizado com sucesso.");
-                Log.Information($"Release de base atualizado com sucesso.");
                 return true;
             }
-
             else if (!string.IsNullOrEmpty(exec.CommandErrors))
             {
                 APIResponseHandler.Add($"Release de base não atualizado com sucesso, verifique os dados ou tente atualizar manualmente. {exec.CommandErrors}");
-                Log.Information($"Release de base não atualizado com sucesso, verifique os dados ou tente atualizar manualmente. {exec.CommandErrors}");
                 Log.Error($"Release de base não atualizado com sucesso, verifique os dados ou tente atualizar manualmente. {exec.CommandErrors}");
                 return false;
             }
@@ -191,10 +207,10 @@ namespace UpdaterService.Handler
         {
             var file = new InstallerConfigModel().GetConfigFile(site, ServiceModelHandler._service.SiteUser, ServiceModelHandler._service.SitePass, releasePath);
 
-            if (!Directory.Exists(config.ServiceWorkDir))
-                Directory.CreateDirectory(config.ServiceWorkDir);
+            if (!Directory.Exists(Path.Combine(config.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName)))
+                Directory.CreateDirectory(Path.Combine(config.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName));
 
-            string path = Path.Combine(config.ServiceWorkDir, "config.xml");
+            string path = Path.Combine(config.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName, "config.xml");
             var serializedConfg = new XmlSerializer(file.GetType());
             using (var writer = new StreamWriter(path))
             {
@@ -206,16 +222,16 @@ namespace UpdaterService.Handler
         public void Init()
         {
             Log.Information("\n Procurando configurações de IIS");
-            Log.Information("\n Procurando configurações de IIS");
 
             bool isValid = LoadSiteConfiguration(out PoolConfigModel poolConfig);
 
             if (!isValid)
             {
-                Log.Information("\n Configurações para atualização inválidas");
                 Log.Error($"Configurações para atualização inválidas. {ServiceModelHandler._service.PoolName}");
                 APIResponseHandler.Add($"Configurações para atualização inválidas. {ServiceModelHandler._service.PoolName}"); return;
             }
+
+            UpdateDBRelease(poolConfig);
 
             Log.Information("\n Parando pool");
 
@@ -237,19 +253,29 @@ namespace UpdaterService.Handler
 
             APIResponseHandler.Add($"Procurando Release. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
 
-            Log.Information($"\n Procurando Release {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
+            Log.Information("\n Ambiente atualizado");
 
-            if (File.Exists(ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)))
+            APIResponseHandler.Add($"Ambiente atualizado. {ServiceModelHandler._service.PoolName}", complete: true);
+            Log.Information($"Ambiente atualizado. {ServiceModelHandler._service.PoolName}");
+        }
+
+        private void UpdateDBRelease(PoolConfigModel poolConfig)
+        {
+            string releasePath = ExtractReleaseFile();
+
+            Log.Information($"\n Procurando Release {releasePath}");
+
+            if (File.Exists(releasePath))
             {
-                APIResponseHandler.Add($"Release Localizado. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
+                APIResponseHandler.Add($"Release Localizado. {releasePath}");
 
-                string configPath = CreateConfig(poolConfig.URL, ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath));
+                string configPath = CreateConfig(poolConfig.URL, releasePath);
 
                 Log.Information("\n Aplicando atualização de base de dados (Release)");
 
                 bool dbUpdateSucess = ReleaseUpdate(config.InstallerExePath, configPath);
 
-                File.Delete(ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath));
+                File.Delete(releasePath);
 
                 if (!dbUpdateSucess)
                     throw new Exception("Erro ao atualizar banco de dados, verifique o log");
@@ -260,15 +286,33 @@ namespace UpdaterService.Handler
             }
             else
             {
-                APIResponseHandler.Add($"Release Não Localizado. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
-                Log.Information($"Release Não Localizado. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
-                Log.Information($"\n Release Não Localizado");
+                APIResponseHandler.Add($"Release Não Localizado. {releasePath}");
+                Log.Information($"Release Não Localizado. {releasePath}");
+            }
+        }
+
+        private string ExtractReleaseFile()
+        {
+            Log.Information($"Extraindo arquivo de release {ServiceModelHandler._service.PatchFilesPath}");
+            using (var zip = ZipFile.OpenRead(ServiceModelHandler._service.PatchFilesPath))
+            {
+                var entry = zip.GetEntry("Release/Release.xml");
+                if(entry != null)
+                {
+                    string destinationFile = Path.Combine(config.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName, "Release.xml");
+
+                    if (!File.Exists(destinationFile))
+                    {
+                        File.Create(destinationFile).Dispose();
+                    }
+
+                    entry.ExtractToFile(destinationFile, true);
+                    Log.Information($"Extração concluída {destinationFile}");
+                    return destinationFile;
+                }
             }
 
-            Log.Information("\n Ambiente atualizado");
-
-            APIResponseHandler.Add($"Ambiente atualizado. {ServiceModelHandler._service.PoolName}", complete: true);
-            Log.Information($"Ambiente atualizado. {ServiceModelHandler._service.PoolName}");
+            return "";
         }
     }
 }

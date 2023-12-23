@@ -18,6 +18,8 @@
                 <th scope="col">#</th>
                 <th scope="col">Cliente</th>
                 <th scope="col">Versão</th>
+                <th scope="col">Criação</th>
+                <th scope="col">Iniciar</th>
                 <th scope="col">Status</th>
                 <th scope="col"></th>
                 <th scope="col"><button class="btn btn-primary edit-version" onclick="openModal()">Novo</button></th>
@@ -33,6 +35,8 @@
                         <th scope="row">@i</th>
                         <td>@service.ClientName</td>
                         <td>@service.VersionName</td>
+                        <td>@service.CreationDate.ToString("dd/MM/yyyy HH:mm:ss ")</td>
+                        <td>@service.ScheduledDate.ToString("dd/MM/yyyy HH:mm:ss ")</td>
                         @switch (service.ScheduleProgress)
                         {
                             case MidModel.ScheduleProgress.Waiting:

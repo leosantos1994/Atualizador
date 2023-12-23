@@ -28,8 +28,8 @@ namespace Updater.Controllers
         public ActionResult Index(int page = 1)
         {
             var services = IsAdm() ?
-                _ServiceRepository.GetAll().OrderByDescending(x => x.ScheduledDate).ToPagedList(page, 10) :
-                _ServiceRepository.GetAll(x => x.ClientId == GetClientByUser().Id).OrderByDescending(x => x.ScheduledDate).ToPagedList(page, 10);
+                _ServiceRepository.GetAll().OrderByDescending(x => x.CreationDate).ToPagedList(page, 10) :
+                _ServiceRepository.GetAll(x => x.ClientId == GetClientByUser().Id).OrderByDescending(x => x.CreationDate).ToPagedList(page, 10);
 
             ViewData.Add("Updates", services);
             return View();
@@ -147,6 +147,7 @@ namespace Updater.Controllers
             {
                 IsService = model.IsService,
                 ScheduledDate = model.ScheduledDate,
+                CreationDate = model.CreationDate,
                 IsPool = model.IsPool,
                 Id = Id,
                 VersionId = model.VersionId,

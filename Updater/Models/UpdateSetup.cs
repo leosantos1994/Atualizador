@@ -9,6 +9,7 @@ namespace Updater.Models
         public bool IsPool { get; set; }
         public bool IsService { get; set; }
         public DateTime ScheduledDate { get; set; }
+        public DateTime CreationDate { get; set; }
 
         public static implicit operator UpdateSetupViewModel(UpdateSetup updateModel)
         {
@@ -17,7 +18,8 @@ namespace Updater.Models
                 Id = updateModel.Id,
                 IsPool = updateModel.IsPool,
                 IsService = updateModel.IsService,
-                ScheduledDate = updateModel.ScheduledDate
+                ScheduledDate = updateModel.ScheduledDate,
+                CreationDate = updateModel.CreationDate
             };
         }
     }

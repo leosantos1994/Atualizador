@@ -31,14 +31,15 @@ namespace UpdaterService.Handler
                 process.StartInfo = new ProcessStartInfo(cmd);
                 process.StartInfo.Arguments = string.Join(" ", arguments);
 
-                process.StartInfo.CreateNoWindow = false;
+                process.StartInfo.CreateNoWindow = true;
                 process.StartInfo.UseShellExecute = false;
+                process.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
                 process.StartInfo.RedirectStandardError = true;
                 process.StartInfo.RedirectStandardOutput = true;
-
+                //process.StartInfo.Verb = "runas";
                 process.OutputDataReceived += p_OutputDataReceived;
                 process.ErrorDataReceived += p_ErrorDataReceived;
-
+                process.StartInfo.LoadUserProfile = true;
                 process.Start();
 
                 process.WaitForExit();

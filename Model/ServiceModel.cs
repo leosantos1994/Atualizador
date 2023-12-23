@@ -20,6 +20,7 @@ namespace MidModel
         public string VersionName { get; set; } = string.Empty;
         public Guid VersionFileId { get; set; }
         public DateTime ScheduledDate { get; set; }
+        public DateTime CreationDate { get; set; } = DateTime.Now;
         public ScheduleProgress ScheduleProgress { get; set; } = ScheduleProgress.Waiting;
 
         public string GetBinariesPath(string prefix)
