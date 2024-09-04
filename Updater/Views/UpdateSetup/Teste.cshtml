@@ -1,0 +1,39 @@
+﻿@using MidModel;
+@model IQueryable<ServiceModel>
+@{
+    ViewData["Title"] = "View";
+}
+
+<h1>View</h1>
+
+<div>
+    <p>Teste</p>
+    <input type='button' value='Novo' id='' class='btn btn-danger edit-version' />
+    @(Html
+        .Grid(Model)
+        .Build(columns =>
+        {
+            columns.Add(model => model.ClientName).Titled("Cliente");
+            columns.Add(model => model.VersionName).Titled("Versão");
+            columns.Add(model => model.CreationDate).Titled("Criação");
+            columns.Add(model => model.ScheduledDate).Titled("Data Início");
+            columns.Add(model => Enum.GetName(model.ScheduleProgress)).Titled("Status").Formatted("{0:d}");
+            columns.Add(model => Html.Raw($" <input type='button' value='Editar' id='{model.Id}' class='btn btn-primary edit-version' />"));
+            columns.Add(model => Html.Raw($" <input type='button' value='Excluir' id='{model.Id}' class='btn btn-danger edit-version' />"));
+        })
+        .Using(GridFilterMode.Header)
+        .Empty("No data found")
+        .Filterable()
+        .Sortable()
+        .Pageable(pager =>
+        {
+            pager.PageSizes = new Dictionary<Int32, String> { { 0, "Todos" }, { 10, "10" }, { 20, "20" }, };
+            pager.ShowPageSizes = true;
+            pager.PagesToDisplay = 10;
+            @*  pager.CurrentPage = 2;
+    pager.RowsPerPage = 2;*@
+        })
+        .RowAttributed(model => new { data_id = model.Id })
+        )
+
+</div>

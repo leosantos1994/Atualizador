@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
+using Updater.Controllers.Filters;
 using Updater.Models;
 
 namespace Updater.Controllers

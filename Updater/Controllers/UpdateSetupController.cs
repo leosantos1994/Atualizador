@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using MidModel;
+using Updater.Controllers.Filters;
 using Updater.Models;
 using Updater.Repository;
 using Updater.Repository.Interfaces;
@@ -33,6 +35,23 @@ namespace Updater.Controllers
 
             ViewData.Add("Updates", services);
             return View();
+        }
+
+        [HttpGet]
+        [ValidateLoggedUser]
+        public ActionResult Teste()
+        {
+            IQueryable<ServiceModel> queryable = null;
+            if (IsAdm())
+            {
+                queryable = _ServiceRepository.GetAll().OrderByDescending(x => x.CreationDate).AsQueryable();
+            }
+            else
+            {
+                queryable = _ServiceRepository.GetAll(x => x.ClientId == GetClientByUser().Id).OrderByDescending(x => x.CreationDate).AsQueryable();
+            }
+
+            return View(queryable);
         }
 
         [HttpGet]

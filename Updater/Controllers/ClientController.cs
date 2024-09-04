@@ -1,5 +1,6 @@
 ﻿using MessagePack;
 using Microsoft.AspNetCore.Mvc;
+using Updater.Controllers.Filters;
 using Updater.Models;
 using Updater.Repository;
 using Updater.Repository.Interfaces;

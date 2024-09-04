@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using MidModel;
+using Updater.Controllers.Filters;
 using Updater.Models;
 using Updater.Repository;
 using Updater.Repository.Interfaces;

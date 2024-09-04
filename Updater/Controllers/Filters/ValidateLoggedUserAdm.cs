@@ -1,20 +1,20 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Updater.Models;
 
-namespace Updater.Controllers
+namespace Updater.Controllers.Filters
 {
-    public class ValidateLoggedUser : ActionFilterAttribute
+    public class ValidateLoggedUserAdm : ActionFilterAttribute
     {
         public override void OnActionExecuting(ActionExecutingContext context)
         {
             try
             {
-                if (!context.HttpContext.User.Identity.IsAuthenticated ||
-                    !context.HttpContext.User.Claims.Any(x => x.Type.ToLower().EndsWith("expiration") && DateTime.Parse(x.Value) > DateTime.Now))
+                if (!context.HttpContext.User.Claims.Any(x => x.Type.ToLower().EndsWith("role") && x.Value.ToLower().Equals(Constants.Role_ADM)))
                     context.Result = new RedirectToRouteResult(
                     new RouteValueDictionary
                     {
-                        { "controller", "Login" },
+                        { "controller", "Unauthorized" },
                         { "action", "Index" }
                     });
             }
