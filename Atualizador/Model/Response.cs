@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace UpdaterService.Model
+﻿namespace UpdaterService.Model
 {
-    public class ResponseModel
+    public class Response
     {
         public string? Log { get; set; }
         public Guid? ServiceId { get; set; }

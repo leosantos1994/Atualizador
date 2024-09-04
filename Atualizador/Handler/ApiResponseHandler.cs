@@ -41,7 +41,7 @@ namespace UpdaterService.Handler
             lock (_lock)
             {
                 string response = Get();
-                APIHandler.SendUpdateInformation(new ResponseModel() { Log = response, ServiceId = serviceId, Complete = _complete }, config);
+                APIHandler.SendUpdateInformation(new Response() { Log = response, ServiceId = serviceId, Complete = _complete }, config);
             }
         }
     }

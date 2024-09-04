@@ -30,7 +30,7 @@ namespace MidModel
 
         public string GetReleasePath(string prefix)
         {
-            return Path.Combine(prefix, "Release", "Release.xml");
+            return Path.Combine(prefix, "Release", "Script.xml");
         }
     }
 

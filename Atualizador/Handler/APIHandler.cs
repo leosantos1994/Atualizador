@@ -1,10 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Net.Http.Headers;
 using Newtonsoft.Json;
-using System.IO.Compression;
-using System.Net.Http.Headers;
+using Serilog;
 using System.Net.Http.Json;
-using System.Net.Mime;
 using System.Text;
 using UpdaterService.Interfaces;
 using UpdaterService.Model;
@@ -26,6 +23,7 @@ namespace UpdaterService.Handler
         public static MidModel.ServiceModel FindUpdateRequest(IConfigSettings config, out string errors)
         {
             errors = "";
+            Log.Information("Buscando conteúdos para atualização");
 
             InitClient(config);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"{config.ApiURL}/update/GetService/");
@@ -118,7 +116,7 @@ namespace UpdaterService.Handler
         }
 
 
-        public static MidModel.ServiceModel SendUpdateInformation(ResponseModel response, IConfigSettings config)
+        public static MidModel.ServiceModel SendUpdateInformation(Response response, IConfigSettings config)
         {
             try
             {

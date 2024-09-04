@@ -27,7 +27,7 @@ namespace UpdaterService.Handler
         {
             try
             {
-                var process = new Process();
+                Process process = new();
                 process.StartInfo = new ProcessStartInfo(cmd);
                 process.StartInfo.Arguments = string.Join(" ", arguments);
 
@@ -36,7 +36,6 @@ namespace UpdaterService.Handler
                 process.StartInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
                 process.StartInfo.RedirectStandardError = true;
                 process.StartInfo.RedirectStandardOutput = true;
-                //process.StartInfo.Verb = "runas";
                 process.OutputDataReceived += p_OutputDataReceived;
                 process.ErrorDataReceived += p_ErrorDataReceived;
                 process.StartInfo.LoadUserProfile = true;

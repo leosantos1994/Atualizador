@@ -1,6 +1,6 @@
 ﻿namespace UpdaterService.Model
 {
-    public class InstallerConfigModel
+    public class InstallerConfig
     {
         public root GetConfigFile(string site, string siteUser, string sitePass, string releasePath, bool adjustIndexes = false)
         {

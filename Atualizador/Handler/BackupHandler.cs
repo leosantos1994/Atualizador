@@ -18,23 +18,34 @@ namespace UpdaterService.Handler
 
         internal void Backup(string backupName, string backupFrom)
         {
+            if (!config.Backup)
+            {
+                APIResponseHandler.Add($"Backup marcado para não realizar, backup não será executado. em: {DateTime.UtcNow}.");
+                Log.Information($"Backup marcado para não realizar, backup não será executado. em: {DateTime.UtcNow}.");
+                return;
+            }
+
             string backup = $"{backupName}-{Constants.Constants.BackUpFolderName}-{DateTime.Now:dd-MM-yyyy-HH-mm-ss}";
 
-            string pastaBkp = Path.Combine(config.BakupFolder, backup);
+            string pastaBkp = Path.Combine(config.BackupFolder, backup);
 
             try
             {
-                if (!Directory.Exists(config.BakupFolder))
-                    Directory.CreateDirectory(config.BakupFolder);
+                if (!Directory.Exists(config.BackupFolder))
+                    Directory.CreateDirectory(config.BackupFolder);
 
                 APIResponseHandler.Add($"Realizando backup da pasta em {pastaBkp} em: {DateTime.UtcNow}.");
                 Log.Information($"Realizando backup da pasta em {pastaBkp} em: {DateTime.UtcNow}.");
 
                 CopyDirectoryBackUp(backupFrom, pastaBkp, true);
 
+                Log.Information($"Iniciando compressão do arquvio da pasta {pastaBkp} em {pastaBkp + ".zip"} este processo pode demorar um pouco. em: {DateTime.UtcNow}.");
+
                 ZipFile.CreateFromDirectory(pastaBkp, pastaBkp + ".zip", CompressionLevel.Fastest, false);
 
                 ServiceModelHandler.BackupZipFile = pastaBkp + ".zip";
+
+                Log.Information($"Excluindo pasta de backup {pastaBkp} em: {DateTime.UtcNow}.");
 
                 Directory.Delete(pastaBkp, true);
 
@@ -84,7 +95,7 @@ namespace UpdaterService.Handler
 
             Log.Information($"Extraindo dados");
 
-            ZipFile.ExtractToDirectory(destinationZip, binFolder,true);
+            ZipFile.ExtractToDirectory(destinationZip, binFolder, true);
 
             APIResponseHandler.Add($"Atualização da pasta concluída em: {DateTime.UtcNow}.");
         }
@@ -107,6 +118,8 @@ namespace UpdaterService.Handler
 
         static void CopyDirectoryBackUp(string sourceDir, string destinationDir, bool recursive)
         {
+            Log.Information($"Realizando backup da pasta {sourceDir} para a pasta {destinationDir} em: {DateTime.UtcNow}.");
+
             var dir = new DirectoryInfo(sourceDir);
 
             if (!dir.Exists)

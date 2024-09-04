@@ -8,7 +8,6 @@ namespace UpdaterService
 {
     public sealed class Operator : IOperator
     {
-        private readonly List<string> APILog = new List<string>();
         IConfigSettings _configSettings;
 
         public Operator(IConfigSettings _configSettings)
@@ -18,23 +17,24 @@ namespace UpdaterService
 
         public void Operate()
         {
-            var request = APIHandler.FindUpdateRequest(_configSettings, out string error);
+            ServiceModel serviceModel = APIHandler.FindUpdateRequest(_configSettings, out string error);
 
             if (!string.IsNullOrEmpty(error))
             {
                 Log.Information(error);
             }
-            else if (request.HasUpdate)
+            else if (serviceModel.HasUpdate)
             {
                 Log.Information("\n Executando operação");
-                ServiceModelHandler.Updater(request);
+                ServiceModelHandler.Updater(serviceModel);
                 ExecuteOperation();
             }
         }
 
         private void ExecuteOperation()
         {
-            APILog.Append($"Localizada atualização em: {DateTimeOffset.Now}");
+            Log.Information($"Localizada atualização em: {DateTimeOffset.Now}");
+
             var logThreadCancellationToken = new CancellationTokenSource();
             try
             {

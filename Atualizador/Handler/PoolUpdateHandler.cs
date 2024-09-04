@@ -14,7 +14,7 @@ namespace UpdaterService.Handler
     public class PoolUpdateHandler : BaseUpdateHandler
     {
         public PoolUpdateHandler(IConfigSettings config) : base(config) { }
-        private bool LoadSiteConfiguration(out PoolConfigModel poolConfig)
+        private bool LoadSiteConfiguration(out PoolConfig poolConfig)
         {
             string PoolName = ServiceModelHandler._service.PoolName;
 
@@ -205,7 +205,7 @@ namespace UpdaterService.Handler
 
         private string CreateConfig(string site, string releasePath)
         {
-            var file = new InstallerConfigModel().GetConfigFile(site, ServiceModelHandler._service.SiteUser, ServiceModelHandler._service.SitePass, releasePath);
+            var file = new InstallerConfig().GetConfigFile(site, ServiceModelHandler._service.SiteUser, ServiceModelHandler._service.SitePass, releasePath);
 
             if (!Directory.Exists(Path.Combine(config.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName)))
                 Directory.CreateDirectory(Path.Combine(config.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName));
@@ -223,7 +223,7 @@ namespace UpdaterService.Handler
         {
             Log.Information("\n Procurando configurações de IIS");
 
-            bool isValid = LoadSiteConfiguration(out PoolConfigModel poolConfig);
+            bool isValid = LoadSiteConfiguration(out PoolConfig poolConfig);
 
             if (!isValid)
             {
@@ -251,7 +251,6 @@ namespace UpdaterService.Handler
 
             Pool(poolConfig.PoolName, start: true);
 
-            APIResponseHandler.Add($"Procurando Release. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
 
             Log.Information("\n Ambiente atualizado");
 
@@ -259,9 +258,11 @@ namespace UpdaterService.Handler
             Log.Information($"Ambiente atualizado. {ServiceModelHandler._service.PoolName}");
         }
 
-        private void UpdateDBRelease(PoolConfigModel poolConfig)
+        private void UpdateDBRelease(PoolConfig poolConfig)
         {
             string releasePath = ExtractReleaseFile();
+
+            APIResponseHandler.Add($"Procurando Release. {ServiceModelHandler._service.GetReleasePath(poolConfig.RootPath)}");
 
             Log.Information($"\n Procurando Release {releasePath}");
 
@@ -296,10 +297,12 @@ namespace UpdaterService.Handler
             Log.Information($"Extraindo arquivo de release {ServiceModelHandler._service.PatchFilesPath}");
             using (var zip = ZipFile.OpenRead(ServiceModelHandler._service.PatchFilesPath))
             {
-                var entry = zip.GetEntry("Release/Release.xml");
-                if(entry != null)
+                string rootFolder = zip.Entries.FirstOrDefault(c => c.FullName.EndsWith("bin/")).FullName.Replace("bin/", "");
+
+                ZipArchiveEntry entry = zip.GetEntry($"{rootFolder}Release/Script.xml");
+                if (entry != null)
                 {
-                    string destinationFile = Path.Combine(config.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName, "Release.xml");
+                    string destinationFile = Path.Combine(config.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName, "Script.xml");
 
                     if (!File.Exists(destinationFile))
                     {

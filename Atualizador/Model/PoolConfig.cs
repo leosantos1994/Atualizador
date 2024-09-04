@@ -1,6 +1,6 @@
 ﻿namespace UpdaterService.Model
 {
-    public class PoolConfigModel
+    public class PoolConfig
     {
         public string? PoolName { get; set; }
         public string? URL { get; set; }
