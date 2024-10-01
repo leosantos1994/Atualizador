@@ -1,4 +1,3 @@
-using Serilog;
 using UpdaterService.Interfaces;
 
 namespace UpdaterService
@@ -21,7 +20,7 @@ namespace UpdaterService
                 {
                     _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
 
-                    _operator.Operate();
+                   await _operator.Operate();
 
                     await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
                 }

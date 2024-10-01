@@ -16,19 +16,19 @@ namespace UpdaterService
             this._configSettings = _configSettings;
         }
 
-        public void Operate()
+        public async Task Operate()
         {
-            var request = APIHandler.FindUpdateRequest(_configSettings, out string error);
+            try
+            {
+                MidModel.ServiceModel serviceModel = await APIHandler.FindUpdateRequest(_configSettings);
 
-            if (!string.IsNullOrEmpty(error))
-            {
-                Log.Information(error);
-            }
-            else if (request.HasUpdate)
-            {
                 Log.Information("\n Executando operação");
-                ServiceModelHandler.Updater(request);
+                ServiceModelHandler.Updater(serviceModel);
                 ExecuteOperation();
+            }
+            catch (Exception error)
+            {
+                Log.Information(error.Message);
             }
         }
 
@@ -88,7 +88,7 @@ namespace UpdaterService
             {
                 Log.Error(ex, "Ocorreu um erro ao atualizar, backup dos arquivos foi iniciado");
                 ZipFile.ExtractToDirectory(ServiceModelHandler.BackupZipFile, ServiceModelHandler.SiteFolderPath, true);
-           
+
                 new PoolUpdateHandler(_configSettings).Pool(ServiceModelHandler._service.PoolName, true);
                 throw;
             }
@@ -102,7 +102,7 @@ namespace UpdaterService
             {
                 Log.Error(ex, "Ocorreu um erro ao atualizar os serviços, backup dos arquivos foi iniciado");
                 ZipFile.ExtractToDirectory(ServiceModelHandler.BackupZipFile, ServiceModelHandler.ServiceFolderPath, true);
-       
+
                 new ServiceUpdateHandler(_configSettings).Service(ServiceModelHandler._service.ServiceName, true);
                 throw;
             }

@@ -2,6 +2,6 @@
 {
     public interface IOperator
     {
-        void Operate();
+        Task Operate();
     }
 }

@@ -1,10 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Net.Http.Headers;
+﻿using MidModel;
 using Newtonsoft.Json;
-using System.IO.Compression;
-using System.Net.Http.Headers;
+using Serilog;
 using System.Net.Http.Json;
-using System.Net.Mime;
 using System.Text;
 using UpdaterService.Interfaces;
 using UpdaterService.Model;
@@ -13,19 +10,19 @@ namespace UpdaterService.Handler
 {
     public class APIHandler
     {
-        public static HttpClient? _Client;
+        public static HttpClient? _httpClient;
         private static void InitClient(IConfigSettings config)
         {
-            if (_Client == null)
+            if (_httpClient == null)
             {
-                _Client = new HttpClient();
-                _Client.Timeout = new TimeSpan(0, 1, 16);
+                _httpClient = new HttpClient();
+                _httpClient.Timeout = new TimeSpan(0, 1, 16);
             }
         }
 
-        public static MidModel.ServiceModel FindUpdateRequest(IConfigSettings config, out string errors)
+        public static async Task<ServiceModel> FindUpdateRequest(IConfigSettings config)
         {
-            errors = "";
+            string errors = "";
 
             InitClient(config);
             HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, $"{config.ApiURL}/update/GetService/");
@@ -34,7 +31,9 @@ namespace UpdaterService.Handler
             string content = System.Text.Json.JsonSerializer.Serialize(config.Clients);
             request.Content = new StringContent(content, Encoding.UTF8, "application/json");
 
-            HttpResponseMessage responseMessage = _Client.SendAsync(request).Result;
+            Log.Information($"Executando requisição para a api: {config.ApiURL} com os dados de cliente: {config.Clients}");
+
+            HttpResponseMessage responseMessage = _httpClient.SendAsync(request).Result;
 
             if (responseMessage.StatusCode == System.Net.HttpStatusCode.NoContent)
             {
@@ -44,53 +43,67 @@ namespace UpdaterService.Handler
             {
                 errors = "Erro interno da API.";
             }
+            else if (responseMessage.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                errors = "Endpoint da API não localizado ou a API não estava disponível.";
+            }
             else if (!responseMessage.IsSuccessStatusCode)
             {
                 errors = "Exceção não tratada pela API.  Status code" + responseMessage.StatusCode;
             }
 
-            if (!string.IsNullOrEmpty(errors))
-                return null;
+            CheckDownloadError(errors);
 
-            var responseContent = JsonConvert.DeserializeObject<MidModel.ServiceModel>(responseMessage.Content.ReadAsStringAsync().Result);
+            ServiceModel responseContent = JsonConvert.DeserializeObject<ServiceModel>(responseMessage.Content.ReadAsStringAsync().Result);
 
-            FileContentResult file = DownloadFiles(config, responseContent, out errors);
+            errors = await DownloadAndSaveFiles(config, responseContent);
 
-            if (!string.IsNullOrEmpty(errors))
-                return null;
-
-            if (!CreateFile(config, responseContent, new MemoryStream(file.FileContents), out errors))
-                return null;
+            CheckDownloadError(errors);
 
             return responseContent;
         }
 
-        public static FileContentResult DownloadFiles(IConfigSettings config, MidModel.ServiceModel responseModel, out string error)
+        private static void CheckDownloadError(string error)
         {
-            HttpResponseMessage response = null;
+            if (!string.IsNullOrEmpty(error))
+                throw new Exception(error);
+        }
+
+        public static async Task<string> DownloadAndSaveFiles(IConfigSettings config, ServiceModel responseModel)
+        {
+            CancellationTokenSource cts = new(600000); //10 minutos
+            CancellationToken cancellationToken = cts.Token;
             try
             {
-                error = "";
+                Log.Information($"Atualização para o cliente localizada, buscando arquivos.");
 
-                var downloadClient = new HttpClient();
+                GetFilePath(config, responseModel, out string fileCreationError);
 
-                downloadClient.Timeout = new TimeSpan(0, 5, 0);
+                if (!string.IsNullOrEmpty(fileCreationError))
+                {
+                    return fileCreationError;
+                }
 
-                var bytes = downloadClient.GetByteArrayAsync($"{config.ApiURL}/update/download/{responseModel.VersionFileId}").Result;
-
-                return new FileContentResult(bytes, "application/zip");
+                await _httpClient.DownloadAndSaveFile($"{config.ApiURL}/update/download/{responseModel.VersionFileId}", responseModel.PatchFilesPath, cancellationToken);
+            }
+            catch (OperationCanceledException e)
+            {
+                return "Verifique sua conexão, tente conectar em um cabo de rede para melhor conectividade ou procure uma rede mais rápida para executar o processo e tente novamente.";
             }
             catch (Exception e)
             {
-                error = "Erro ao buscar arquivo da atualização. " + e.Message + "\n " + response?.StatusCode.ToString() + response?.Content.ReadAsStringAsync().Result;
+                return "Erro ao executar operação " + e.Message;
             }
-            return null;
+
+            return "";
         }
 
-        private static bool CreateFile(IConfigSettings cfg, MidModel.ServiceModel reponseService, Stream file, out string error)
+        private static void GetFilePath(IConfigSettings cfg, ServiceModel reponseService, out string error)
         {
             try
             {
+                Log.Information($"Criando pastas de atualização no ambiente de trabalho.");
+
                 string servicePath = Path.Combine(cfg.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName);
 
                 if (!Directory.Exists(servicePath))
@@ -98,22 +111,13 @@ namespace UpdaterService.Handler
 
                 error = "";
 
-                string filePath = Path.Combine(servicePath, Constants.Constants.FileName);
+                string fileFullPath = Path.Combine(servicePath, Constants.Constants.FileName);
 
-                reponseService.PatchFilesPath = filePath;
-
-                using (var fileStream = File.Create(filePath))
-                {
-                    file.Seek(0, SeekOrigin.Begin);
-                    file.CopyTo(fileStream);
-                }
-
-                return true;
+                reponseService.PatchFilesPath = fileFullPath;
             }
             catch (Exception ex)
             {
                 error = ex.ToString();
-                return false;
             }
         }
 
@@ -122,7 +126,7 @@ namespace UpdaterService.Handler
         {
             try
             {
-                Task<HttpResponseMessage> message = _Client.PostAsJsonAsync($"{config.ApiURL}/update/patch/{config.Clients}", response);
+                Task<HttpResponseMessage> message = _httpClient.PostAsJsonAsync($"{config.ApiURL}/update/patch/{config.Clients}", response);
                 message.Result.EnsureSuccessStatusCode();
                 return JsonConvert.DeserializeObject<MidModel.ServiceModel>(message.Result.Content.ReadAsStringAsync().Result);
             }
@@ -139,7 +143,7 @@ namespace UpdaterService.Handler
                 HttpRequestMessage requestMessage = new HttpRequestMessage();
                 requestMessage.Method = new HttpMethod("POST");
                 requestMessage.RequestUri = new Uri($"{config.ApiURL}/update/putstatus/{serviceId}/{progress}");
-                Task<HttpResponseMessage> message = _Client.SendAsync(requestMessage);
+                Task<HttpResponseMessage> message = _httpClient.SendAsync(requestMessage);
                 message.Result.EnsureSuccessStatusCode();
             }
             catch (Exception e)
