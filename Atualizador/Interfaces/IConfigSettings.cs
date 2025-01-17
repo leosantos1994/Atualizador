@@ -8,5 +8,6 @@
         string InstallerExePath { get; set; }
         string ServiceWorkDir { get; set; }
         string AplicationPath { get; set; }
+        bool Backup { get; set; }
     }
 }

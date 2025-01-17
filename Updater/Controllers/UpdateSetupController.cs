@@ -64,16 +64,22 @@ namespace Updater.Controllers
             }
             else
             {
-                var model = new UpdateSetupViewModel();
-                model.Versions = _VersionRepository.GetAll(x => x.Locked == false).ToList();
+                UpdateSetupViewModel updateSetupViewModel = GetInitialData();
 
-                if (IsAdm())
-                    model.Clients = _ClientRepository.GetAll(x => x.Locked == false).ToList();
-                else
-                    model.Clients = new List<Client> { GetClientByUser() };
-
-                return PartialView("_EditUpdateSetupPartial", model);
+                return PartialView("_EditUpdateSetupPartial", updateSetupViewModel);
             }
+        }
+
+        private UpdateSetupViewModel GetInitialData()
+        {
+            UpdateSetupViewModel updateSetupViewModel = new UpdateSetupViewModel();
+            updateSetupViewModel.Versions = _VersionRepository.GetAll(x => x.Locked == false).ToList();
+
+            if (IsAdm())
+                updateSetupViewModel.Clients = _ClientRepository.GetAll(x => x.Locked == false).ToList();
+            else
+                updateSetupViewModel.Client = GetClientByUser();
+            return updateSetupViewModel;
         }
 
         private bool IsAdm()
@@ -93,24 +99,46 @@ namespace Updater.Controllers
         {
             try
             {
-                var serviceModel = GetServiceModel(viewModel);
-
-                if (viewModel.Id == Guid.Empty)
+                if (ValidarDados())
                 {
-                    _ServiceRepository.Insert(serviceModel);
-                }
-                else
-                {
-                    _ServiceRepository.Update(serviceModel);
-                }
+                    ServiceModel serviceModel = GetServiceModel(viewModel);
 
-                ViewData["error"] = "Atualização agendada com sucesso.";
+                    if (viewModel.Id == Guid.Empty)
+                    {
+                        _ServiceRepository.Insert(serviceModel);
+                    }
+                    else
+                    {
+                        _ServiceRepository.Update(serviceModel);
+                    }
+
+                    ViewData["error"] = "Atualização agendada com sucesso.";
+                 
+                    return PartialView("_EditUpdateSetupPartial", viewModel);
+                }
             }
             catch (Exception ex)
             {
                 ViewData["error"] = "Erro: " + ex.Message;
             }
-            return PartialView("_EditUpdateSetupPartial", viewModel);
+            return PartialView("_EditUpdateSetupPartial", GetInitialData());
+        }
+
+        private bool ValidarDados()
+        {
+            if (!Guid.TryParse(Request.Form["client"][0].ToString(), out Guid clientId) || clientId == Guid.Empty)
+            {
+                ViewData["error"] = "Cliente não foi informado.";
+
+                return false;
+            }
+            if (!Guid.TryParse(Request.Form["version"][0].ToString(), out Guid versionId) || versionId == Guid.Empty)
+            {
+                ViewData["error"] = "Versão não foi informada.";
+                return false;
+            }
+
+            return true;
         }
 
         [HttpPost]
@@ -160,18 +188,20 @@ namespace Updater.Controllers
 
         private UpdateSetupViewModel GetModel(Guid Id)
         {
-            var model = _ServiceRepository.GetAll(x => x.Id == Id).FirstOrDefault();
+            ServiceModel serviceModel = _ServiceRepository.GetAll(x => x.Id == Id).FirstOrDefault();
 
             return new()
             {
-                IsService = model.IsService,
-                ScheduledDate = model.ScheduledDate,
-                CreationDate = model.CreationDate,
-                IsPool = model.IsPool,
+                IsService = serviceModel.IsService,
+                ScheduledDate = serviceModel.ScheduledDate,
+                CreationDate = serviceModel.CreationDate,
+                IsPool = serviceModel.IsPool,
                 Id = Id,
-                VersionId = model.VersionId,
-                Clients = new() { _ClientRepository.Get(model.ClientId) },
-                Versions = new() { _VersionRepository.Get(model.VersionId) },
+                VersionId = serviceModel.VersionId,
+                Clients = IsAdm() ? new() { _ClientRepository.Get(serviceModel.ClientId) } : new(),
+                Client = _ClientRepository.Get(serviceModel.ClientId),
+                Versions = _VersionRepository.GetAll(x => x.Locked == false).ToList(),
+                Version = _VersionRepository.Get(serviceModel.VersionId)
             };
         }
     }

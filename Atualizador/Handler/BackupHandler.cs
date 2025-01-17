@@ -18,6 +18,12 @@ namespace UpdaterService.Handler
 
         internal void Backup(string backupName, string backupFrom)
         {
+            if (!config.Backup)
+            {
+                Log.Information($"Backup não configurado ignorando etapa.");
+                return;
+            }
+
             string backup = $"{backupName}-{Constants.Constants.BackUpFolderName}-{DateTime.Now:dd-MM-yyyy-HH-mm-ss}";
 
             string pastaBkp = Path.Combine(config.BakupFolder, backup);

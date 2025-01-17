@@ -3,7 +3,7 @@
 <div class="modal-dialog" role="document" id="dialogo">
     <form asp-controller="UpdateSetup" asp-action="EditUpdate" enctype="multipart/form-data"
           data-ajax="true" data-ajax-begin="loadSpinner" data-ajax-method="POST" data-ajax-confirm="Deseja Continuar?" data-ajax-complete="completed">
-        @Html.AntiForgeryToken();
+        @Html.AntiForgeryToken()
 
         <style>
             .modal-content,
@@ -44,14 +44,24 @@
                         </label>
                     </div>
                     <div class="col-md-6">
-                        @Html.EditorFor(m => m.ScheduledDate,  new { required= "required", type = "date",  @class = "form-control" })
+                        @Html.EditorFor(m => m.ScheduledDate, new { required = "required", type = "date", @class = "form-control" })
                         @Html.LabelFor(m => m.ScheduledDate)
                     </div>
                     <div class="col-md-6">
                         <select class="form-control" id="client" name="client" required>
-                            @foreach (var item in Model.Clients ?? new List<Client>())
-                            {
-                                <option selected="selected" value="@item.Id">@item.Name</option>
+                            @{
+                                if (Model.Client != null)
+                                {
+                                    <option selected="selected" value="@Model.Client.Id">@Model.Client.Name</option>
+                                }
+                                else
+                                {
+                                    <option selected="selected" >Selecione o cliente</option>
+                                }
+                                foreach (var item in Model.Clients ?? new List<Client>())
+                                {
+                                    <option value="@item.Id">@item.Name</option>
+                                }
                             }
                         </select>
                         <label class="form-check-label" for="client">
@@ -61,9 +71,17 @@
                     <div class="col-md-6">
                         <select class="form-control" id="version" name="version" required>
                             @{
+                                if (Model.Version != null)
+                                {
+                                    <option selected="selected" value="@Model.Version.Id">@(Model.Version.ProductVersion + " - " + Model.Version.Patch)</option>
+                                }
+                                else
+                                {
+                                    <option selected="selected">Selecione a versão</option>
+                                }
                                 foreach (var item in Model.Versions ?? new List<Updater.Models.Version>())
                                 {
-                                    <option selected="selected" value="@item.Id">@(item.ProductVersion + " - " + item.Patch)  </option>
+                                    <option  value="@item.Id">@(item.ProductVersion + " - " + item.Patch)  </option>
                                 }
                             }
                         </select>
@@ -80,7 +98,7 @@
                 </div>
 
                 @section Scripts
-                    {
+                {
                     @{
                         await Html.RenderPartialAsync("_ValidationScriptsPartial");
                     }

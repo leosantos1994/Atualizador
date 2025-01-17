@@ -296,10 +296,10 @@ namespace UpdaterService.Handler
             Log.Information($"Extraindo arquivo de release {ServiceModelHandler._service.PatchFilesPath}");
             using (var zip = ZipFile.OpenRead(ServiceModelHandler._service.PatchFilesPath))
             {
-                var entry = zip.GetEntry("Release/Release.xml");
+                var entry = zip.GetEntry("Release/Script.xml");
                 if(entry != null)
                 {
-                    string destinationFile = Path.Combine(config.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName, "Release.xml");
+                    string destinationFile = Path.Combine(config.ServiceWorkDir, Constants.Constants.ServiceFilesFolderName, "Script.xml");
 
                     if (!File.Exists(destinationFile))
                     {
